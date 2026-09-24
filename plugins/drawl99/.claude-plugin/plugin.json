@@ -1,0 +1,10 @@
+{
+  "name": "drawl99",
+  "description": "Flujos de trabajo personales de drawl99 para Claude Code: issues de GitHub en orden de milestones y dependencias.",
+  "version": "1.0.0",
+  "author": {
+    "name": "drawl99"
+  },
+  "repository": "https://github.com/drawl99/claude-plugins",
+  "keywords": ["github", "issues", "workflow", "sdd"]
+}
