@@ -6,7 +6,7 @@ correr suites largas, revisar) lo hacen sub-agentes con contexto propio, que
 devuelven un resumen corto. Así una corrida en automático puede encadenar
 varias issues sin llenar el contexto ni forzar compactaciones.
 
-Todo se ejecuta en el checkout del repo elegido (Paso 1.2 de `SKILL.md`): la
+Todo se ejecuta en el checkout del repo elegido (Paso 1.1 de `SKILL.md`): la
 sesión principal y cada sub-agente usan `git -C <ruta>`, `gh ... -R <owner/repo>`
 y `cd <ruta> && ...` en cada comando, y los sub-agentes reciben esa ruta.
 

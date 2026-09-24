@@ -10,7 +10,7 @@ inventes labels de estado.
 
 ## Qué buscar
 
-En el repositorio elegido (en el checkout del Paso 1.2), sin importar el
+En el repositorio elegido (en el checkout del Paso 1.1), sin importar el
 alcance, entre las issues abiertas asignadas al usuario actual
 (`gh issue list -R <owner/repo> --assignee @me --state open --json number,title`;
 tu login, con `gh api user -q .login`):

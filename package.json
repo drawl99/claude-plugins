@@ -1,6 +1,6 @@
 {
   "name": "drawl99-agent-skills",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Skills personales de drawl99 para Claude Code, OpenCode y Pi: trabajar issues de GitHub en orden de milestones y dependencias.",
   "keywords": ["pi-package", "github", "issues", "workflow", "sdd"],

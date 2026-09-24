@@ -62,66 +62,18 @@ global y rompe los otros repos de la persona.
 
 ## Paso 1: repo, alcance y rama base
 
-### 1.1 Repositorio
+### 1.1 Repositorio y checkout
 
-Si el argumento ya fija el repositorio (ver *Argumentos*), úsalo y salta al 1.2.
-Si no, **pregunta siempre**: nunca asumas un repositorio, tampoco el del
-directorio actual.
+Si el argumento fija el repositorio, úsalo. Si no, **pregunta siempre** cuál,
+en una sola pregunta, entre los repos propios y los de las organizaciones de la
+persona (con varias cuentas de GitHub, lista con cada una y recuerda cuál ve
+cada repo); nunca asumas uno, tampoco el del directorio actual. Después resuelve
+el **checkout local**: el directorio actual si es ese repo, un clon existente en
+`workspaceDirs`, o clonarlo con permiso. Desde ahí, **todo** comando de git, `gh`
+y pruebas corre en ese checkout. Cómo armar la lista sin gastar, cómo preguntar
+y cómo encontrar o crear el clon: [references/repo-selection.md](references/repo-selection.md).
 
-1. **Candidatos**, con `gh`:
-   - los repos propios: `gh repo list --limit 100 --json nameWithOwner,hasIssuesEnabled,pushedAt,isArchived`;
-   - los de cada organización a la que pertenece la persona:
-     `gh api user/orgs --paginate -q '.[].login'` y, por cada una,
-     `gh repo list <org> --limit 100 --json nameWithOwner,hasIssuesEnabled,pushedAt,isArchived`.
-
-   Descarta los archivados y los que tienen las issues deshabilitadas.
-2. **Varias cuentas:** si `githubAccounts` declara cuentas o `gh auth status`
-   muestra más de una, lista con cada cuenta relevante
-   (`GH_TOKEN=$(gh auth token -u <cuenta>)`) y recuerda qué cuenta ve cada
-   repo. Si varias ven el mismo, gana la de `githubAccounts` (la clave más
-   específica); si no hay, la activa. Todas las llamadas posteriores sobre el
-   repo elegido usan esa cuenta.
-3. **Barato:** no cuentes issues de cien repos uno por uno. Ordena por
-   `pushedAt` (más reciente primero) y comprueba solo los que vas a mostrar,
-   hasta llenar las opciones: si tiene al menos una issue abierta
-   (`gh issue list -R <owner/repo> --state open --limit 1 --json number`) y,
-   para la etiqueta, `gh api repos/<owner>/<repo> -q .open_issues_count`
-   (incluye PRs: muéstralo como "aprox.").
-4. **Pregunta en una sola pregunta** (`AskUserQuestion`):
-   - primera opción, el repo del directorio actual si es un repo de GitHub
-     (`git remote get-url origin`), marcado "(este directorio)";
-   - después, los pusheados más recientemente que tienen issues abiertas, con
-     la etiqueta `owner/repo`, marcados como personal u organización
-     (`owner/repo · personal`, `owner/repo · org <org>`) y con las issues
-     abiertas aprox.;
-   - el resto, con "Other" escribiendo `owner/repo`. Verifica que exista, que
-     lo vea alguna cuenta y que tenga issues habilitadas.
-
-   No toques ninguna issue antes de la respuesta.
-
-### 1.2 Checkout local
-
-El trabajo necesita un clon local del repositorio elegido.
-
-1. Si el directorio actual es ese repo (su `origin` apunta a `owner/repo`, por
-   https o ssh), úsalo.
-2. Si no, busca un clon existente en `workspaceDirs` de las preferencias (por
-   defecto `["~/Desktop", "~/code", "~/projects", "~/dev"]`): directorios con
-   `.git` hasta unos pocos niveles de profundidad cuyo
-   `git -C <dir> remote get-url origin` apunte a `owner/repo`. Si encuentras
-   uno, pregunta si usarlo (una pregunta; si hay varios, uno por opción).
-3. Si no hay ninguno, ofrece clonarlo en `<primera entrada de workspaceDirs>/<repo>`
-   o en una ruta que escriba el usuario, con la cuenta que ve el repo:
-   `GH_TOKEN=$(gh auth token -u <cuenta>) gh repo clone <owner/repo> <ruta>`.
-   Si la ruta ya existe y no es ese repo, pide otra.
-
-Una vez elegido, **todos** los comandos de git, `gh` y pruebas de la corrida se
-ejecutan en ese checkout: `git -C <ruta> ...`, `gh ... -R <owner/repo>` (o
-`cd <ruta> && gh ...`), `cd <ruta> && <comando de verify>`, en cada comando.
-Nunca asumas que el directorio de la sesión cambió. Los sub-agentes reciben la
-ruta del checkout y la misma regla.
-
-### 1.3 Requisitos del repositorio
+### 1.2 Requisitos del repositorio
 
 Con el repo y el checkout elegidos, completa el chequeo con otra tabla, igual
 que en el Paso 0:
@@ -140,7 +92,7 @@ que en el Paso 0:
 Con algún ❌ no sigas. Si la config del repo no existe, ofrece crearla ahora con
 lo que ya se sabe (ver [references/config.md](references/config.md)).
 
-### 1.4 Alcance
+### 1.3 Alcance
 
 Si el argumento fija la issue, el alcance es esa issue: no preguntes. Léela con
 `gh issue view <n> -R <owner/repo> --json number,title,state,body,labels,assignees,milestone,comments,url`
@@ -165,10 +117,10 @@ Si no:
    "Other" escribiendo el título. **No asumas un alcance por defecto** y no
    toques ninguna issue antes de la respuesta.
 
-### 1.5 Rama base
+### 1.4 Rama base
 
 1. La rama base es `baseBranch` de la config del repo; si no está, la rama por
-   defecto del repositorio (`defaultBranchRef` del 1.3).
+   defecto del repositorio (`defaultBranchRef` del 1.2).
 2. Si la rama base no es la rama por defecto, recuérdalo al usuario: los PRs
    contra ella no cierran la issue solos (ver *Cierre de la issue*).
 3. Toda rama nueva sale de la rama base actualizada. Primero
@@ -243,36 +195,14 @@ posibles:
   el alcance "Sin milestone" o por argumento).
 - Un milestone cuya descripción dice que todavía no tiene issues listas, o que
   no debe convertirse en issues, no se toca: si llegas ahí, terminaste.
-- Lista las issues de cada grupo con
-  `gh api --paginate "repos/<owner>/<repo>/issues?state=open&milestone=<número|none>&per_page=100"`
-  y descarta los elementos que tienen `pull_request` (ese endpoint también
-  devuelve PRs). Cada issue trae `issue_dependencies_summary` y
-  `sub_issues_summary`.
-- **Dentro del grupo manda el grafo de dependencias**, no el listado; a igual
-  disponibilidad, la de número más bajo primero. Una issue está disponible solo
-  si **todos** sus bloqueantes están cerrados. Si `total_blocked_by` es mayor
-  que 0, lee los bloqueantes con
-  `gh api repos/<owner>/<repo>/issues/<n>/dependencies/blocked_by` (un arreglo
-  de issues) y mira el `state` de cada una.
-- **Dependencias escritas pero no enlazadas.** Si la descripción declara
-  dependencias ("Depends on #12", "Blocked by #12", "Depende de #12",
-  "Bloqueada por #12", con o sin dos puntos, también `owner/repo#12` o la URL
-  de otra issue) que no están en `blocked_by`, trátalas como bloqueantes igual:
-  si la referida está abierta, la issue no está disponible. Reporta cada
-  dependencia faltante y ofrece enlazarla de forma nativa en una sola pregunta
-  al final de la selección, nunca sin permiso:
-  `gh api -X POST repos/<owner>/<repo>/issues/<n>/dependencies/blocked_by -F issue_id=<id>`,
-  donde `<id>` es el `id` numérico de la bloqueante (no su número):
-  `gh api repos/<owner>/<repo>/issues/<bloqueante> -q .id` (en su propio repo
-  si es de otro). Si el enlace falla, déjala como texto y dilo. Sin el enlace,
-  *Desbloqueo* no la ve.
-- **Sub-issues.** Una issue con sub-issues abiertas
-  (`sub_issues_summary.total` mayor que `sub_issues_summary.completed`) es un
-  padre: no la tomes mientras tenga sub-issues abiertas; toma las sub-issues
-  (`gh api repos/<owner>/<repo>/issues/<n>/sub_issues`), que cumplen *Selección*
-  por su cuenta. Cuando se cierran todas, el padre vuelve a ser candidato; si
-  solo agrupaba a sus sub-issues y no le queda trabajo propio, dilo y ofrece
-  cerrarlo, nunca sin permiso.
+- **Dentro de cada grupo manda el grafo de dependencias**, no el listado; a
+  igual disponibilidad, la de número más bajo primero. Una issue está
+  disponible solo si **todos** sus bloqueantes están cerrados: los nativos de
+  GitHub (`blocked_by`) y también los escritos en el texto ("Depends on #12",
+  "Depende de #12"…), que además ofreces enlazar de forma nativa, nunca sin
+  permiso. Un padre con sub-issues abiertas no se toma: se toman sus
+  sub-issues. Cómo listar, leer los bloqueantes, enlazarlos y tratar las
+  sub-issues: [references/dependencies.md](references/dependencies.md).
 
 ## Selección (una issue a la vez)
 
@@ -283,7 +213,7 @@ cumple todo:
 - Está en el alcance elegido y abierta.
 - No es un padre con sub-issues abiertas.
 - Todos sus bloqueantes (nativos y escritos) cerrados.
-- Tiene el label `labels.ready`, si el repo tiene ese label (Paso 1.3). Si no
+- Tiene el label `labels.ready`, si el repo tiene ese label (Paso 1.2). Si no
   lo tiene, este requisito está apagado para el repo.
 - No está asignada a otra persona. Con `assignee: "me-or-unassigned"` (por
   defecto), asignada a ti (`@me`) o sin asignar; con `"me"`, solo asignada a
@@ -342,7 +272,7 @@ En modo **una issue**, la issue ya está elegida (Paso 2): `confirmEachIssue` y
    `defaultRoute: "ask"` (el valor por defecto) pregunta con `AskUserQuestion`,
    con la recomendada primero. Con `"direct"` o `"sdd"`, usa esa ruta salvo que
    la recomendación sea la otra con señales fuertes: en ese caso pregunta igual.
-3. **Rama.** Desde la rama base actualizada (Paso 1.5), créala enlazada a la
+3. **Rama.** Desde la rama base actualizada (Paso 1.4), créala enlazada a la
    issue:
    `gh issue develop <n> -R <owner/repo> --base <base> --name <rama> --checkout`
    (en el checkout). El nombre sale de `branchPattern` (por defecto
@@ -393,14 +323,9 @@ En modo **una issue**, la issue ya está elegida (Paso 2): `confirmEachIssue` y
 8. **CI y merge.** Espera los `requiredChecks` (o todos los checks, si no hay
    config). Si fallan por tu cambio, corrígelo; si fallan por causa ajena,
    detente y avisa.
-   - **Que los checks existan.** Si a los pocos minutos de abrir el PR no
-     arrancó ningún check, no es verde: averigua por qué antes de seguir. Lo
-     más común es que el PR tenga conflictos (`gh pr view --json mergeable`
-     da `CONFLICTING`), y GitHub no corre workflows de `pull_request` en ese
-     caso. Rebasea sobre la rama base y pushea. Si hubo que cambiarle la base
-     al PR, el cambio de base no dispara los workflows: pushea de nuevo (por
-     ejemplo, tras rebasear) para que corran.
-   - Nunca des por aprobado un PR sin checks, ni lo mergees así.
+   - **Que los checks existan:** un PR sin checks no es verde; averigua por qué
+     antes de seguir, nunca lo apruebes ni lo mergees así
+     (ver [references/github-lifecycle.md](references/github-lifecycle.md)).
    - `stopAt: "pr"` (por defecto): con CI en verde, la issue termina acá. Si la
      rama base no es la rama por defecto, dilo en el reporte: la issue va a
      quedar abierta después del merge y hay que cerrarla (la próxima corrida lo
@@ -422,19 +347,9 @@ En modo **una issue**, la issue ya está elegida (Paso 2): `confirmEachIssue` y
 
 ## Cierre de la issue
 
-Las palabras clave de cierre (`Fixes #<n>`) **solo cierran la issue cuando el PR
-se mergea en la rama por defecto del repositorio**.
-
-- **Base = rama por defecto:** `Fixes #<n>` la cierra al mergear. Después del
-  merge, confirma que quedó cerrada (`gh issue view <n> --json state`); si
-  sigue abierta, ciérrala como en el caso siguiente.
-- **Base = otra rama** (una rama de integración): después del merge la cierras
-  tú, y solo después de verificar que el PR está mergeado
-  (`gh pr view <pr> -R <owner/repo> --json state,baseRefName` da `MERGED`):
-  `gh issue close <n> -R <owner/repo> --comment "Resuelta en #<pr>, mergeado en <base>."`
-- Con `stopAt: "pr"` el merge no ocurre en la corrida: repórtalo, y la próxima
-  corrida detecta "PR mergeado en una base que no es la por defecto, issue
-  abierta" y ofrece cerrarla (ver [references/resume.md](references/resume.md)).
+`Fixes #<n>` **solo cierra la issue si el PR se mergea en la rama por defecto**.
+Con otra rama base, la cierras tú después de verificar el merge. Detalle en
+[references/github-lifecycle.md](references/github-lifecycle.md).
 
 ## Issues que salen de una issue
 
@@ -447,18 +362,9 @@ leíste. Reglas y criterios completos en
 
 ## Estados en GitHub
 
-Una issue en GitHub solo está abierta o cerrada: no hay In Progress ni In
-Review. **Nunca inventes labels para estados.** Que una issue está en curso se
-deduce del comentario de reclamo, de la rama enlazada y del PR abierto que la
-referencia. Lo único que cambias en una issue es:
-
-- asignártela al reclamarla, si estaba sin asignar;
-- comentar;
-- en *Desbloqueo*, y con permiso del usuario, reasignarla;
-- cerrarla después de verificar el merge (ver *Cierre de la issue*), o cuando
-  el usuario lo acepta al retomar;
-- con permiso del usuario: enlazar dependencias nativas, agregar el label de
-  lista, crear labels.
+Una issue solo está abierta o cerrada: **nunca inventes labels de estado**. Lo
+que puedes cambiar en una issue, y cuándo, está en
+[references/github-lifecycle.md](references/github-lifecycle.md).
 
 ## Restricciones
 

@@ -8,6 +8,17 @@ Cambios del plugin `drawl99`. Formato basado en
 Para actualizar: `/plugin marketplace update drawl99` y después
 `/plugin update drawl99@drawl99`, y reinicia Claude Code.
 
+## [1.1.0] — 2026-09-24
+
+### Cambiado
+- `github-goal` carga menos al invocarse: la elección de repo y checkout, el
+  detalle de dependencias y sub-issues, y el ciclo de vida en GitHub (checks
+  faltantes, cierre de la issue, estados) pasaron a `references/`
+  (`repo-selection.md`, `dependencies.md`, `github-lifecycle.md`). Se leen solo
+  cuando hacen falta. Los sub-pasos del Paso 1 se renumeraron (1.1 repo y
+  checkout, 1.2 requisitos, 1.3 alcance, 1.4 rama base). Sin cambios de
+  comportamiento.
+
 ## [1.0.0] — 2026-09-24
 
 ### Agregado

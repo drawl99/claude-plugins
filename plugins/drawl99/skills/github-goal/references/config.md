@@ -47,7 +47,7 @@ trabaje en ese repo. Describe el repositorio, nunca a una persona.
 | `language` | Idioma de commits (`commits`) y de descripciones de PR (`pullRequests`), como código ISO (`es`, `en`). | Se imita el idioma de los últimos commits y PRs del repo. |
 
 **Si el archivo no existe**, ofrece crearlo al terminar el chequeo del
-repositorio (Paso 1.3), con lo que ya se sabe: la rama base, los labels que
+repositorio (Paso 1.2), con lo que ya se sabe: la rama base, los labels que
 existen en el repo y los comandos de `verify` que se pueden inferir del repo
 (`mvnw`, scripts de `package.json`, `Makefile`, lo que diga `CLAUDE.md`).
 Muéstralo antes de escribirlo. Una vez escrito, dile al usuario que lo commitee
