@@ -8,6 +8,30 @@ Cambios del plugin `drawl99`. Formato basado en
 Para actualizar: `/plugin marketplace update drawl99` y después
 `/plugin update drawl99@drawl99`, y reinicia Claude Code.
 
+## [1.2.0] — 2026-09-24
+
+### Agregado
+- Ruta `auto` (`defaultRoute: "auto"` o "decide tú la ruta" al invocar): usa la
+  ruta que recomienda `workflow-decision` sin preguntar y deja el porqué en la
+  issue y en el PR. Una issue con ambigüedad de negocio se salta y se reporta.
+- Argumentos en lenguaje natural:
+  `/drawl99:github-goal automático milestone "v1.0", decide tú la ruta`. El
+  milestone se resuelve contra los milestones abiertos del repo y fija el
+  alcance sin preguntarlo; la corrida termina cuando a ese milestone no le
+  quedan issues disponibles.
+- Modelo por etapa en la ruta directa: opus para planear y revisar, sonnet para
+  implementar y corregir. Configurable con `models` en las preferencias
+  personales. La implementación escala a opus si falla sin causa clara o si la
+  issue toca seguridad, dinero o concurrencia. La ruta SDD sigue con la tabla
+  de gentle-ai.
+- Sub-agente de plan (solo lectura) cuando entender el cambio exige leer 4
+  archivos o más.
+
+### Cambiado
+- En automático, la política de ruta se fija **una vez** al arrancar, en vez
+  de preguntar la ruta en cada issue, y se muestra el plan de la corrida en una
+  línea.
+
 ## [1.1.0] — 2026-09-24
 
 ### Cambiado

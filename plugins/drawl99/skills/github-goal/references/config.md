@@ -69,6 +69,7 @@ repo.
   "confirmEachIssue": false,
   "defaultRoute": "ask",
   "takeBlockingIssues": "ask",
+  "models": { "plan": "opus", "implement": "sonnet", "review": "opus", "fix": "sonnet" },
   "githubAccounts": { "mi-org": "mi-cuenta-de-trabajo" },
   "workspaceDirs": ["~/Desktop", "~/code", "~/projects", "~/dev"]
 }
@@ -80,8 +81,9 @@ repo.
 | `stopAt` | `"pr"` \| `"merge"` | `"pr"` | Con `"pr"`, el flujo termina cada issue al abrir el PR con CI en verde, y sigue con la siguiente solo si sus bloqueantes no dependen de ese PR. Con `"merge"`, mergea cuando el CI está verde (nunca una issue `security`) y cierra la issue si la base no es la rama por defecto. |
 | `maxIssues` | número o `null` | `null` | Solo en modo automático: cuántas issues trabajar en una corrida. `null` significa hasta agotar las disponibles. |
 | `confirmEachIssue` | `true` \| `false` | `false` | Solo en modo automático: con `true`, antes de reclamar cada issue pregunta si tomarla o saltarla. |
-| `defaultRoute` | `"ask"` \| `"direct"` \| `"sdd"` | `"ask"` | Con `"ask"`, muestra la recomendación y pregunta. Con `"direct"` o `"sdd"`, usa esa ruta sin preguntar, salvo que la recomendación sea la otra con señales fuertes: en ese caso pregunta igual. Si SDD no está instalado, `"sdd"` se trata como `"ask"`. |
+| `defaultRoute` | `"ask"` \| `"auto"` \| `"direct"` \| `"sdd"` | `"ask"` | Con `"ask"`, en una issue muestra la recomendación y pregunta; en automático pregunta **una vez** al arrancar si decide la ruta sola o pregunta en cada issue. Con `"auto"`, usa la ruta recomendada sin preguntar y deja el porqué en la issue y en el PR. Con `"direct"` o `"sdd"`, usa esa ruta sin preguntar, salvo que la recomendación sea la otra con señales fuertes: en ese caso pregunta igual. Si SDD no está instalado, `"sdd"` se trata como `"ask"`. |
 | `takeBlockingIssues` | `"ask"` \| `"never"` | `"ask"` | Cuando estás bloqueado por una issue asignada a otra persona que nadie empezó, con `"ask"` te ofrece tomarla (siempre preguntando, nunca sola). Con `"never"`, solo reporta el bloqueo. Ver *Desbloqueo* en `SKILL.md`. |
+| `models` | objeto `{ "plan", "implement", "review", "fix" }`, cada uno `"opus"` \| `"sonnet"` \| `"haiku"` \| `"inherit"` | `plan` y `review` en `"opus"`, `implement` y `fix` en `"sonnet"` | Solo ruta directa: el modelo de cada sub-agente. Las etapas que no pongas usan el valor por defecto. `"inherit"` usa el modelo de la sesión. Escalada y reglas: *Modelo por etapa* en [execution.md](execution.md). En la ruta SDD manda gentle-ai. |
 | `githubAccounts` | objeto `{ "<owner>" o "<owner>/<repo>": "<cuenta de gh>" }` | vacío | Para quien tiene varias cuentas de GitHub en `gh`: qué cuenta usar en cada organización o repo. La clave más específica gana (`owner/repo` antes que `owner`). Se usa para listar repos al elegir y para todas las llamadas sobre el repo elegido, con `GH_TOKEN=$(gh auth token -u <cuenta>)`; la cuenta activa global no se toca. La cuenta tiene que estar logueada (`gh auth status`). |
 | `workspaceDirs` | lista de directorios | `["~/Desktop", "~/code", "~/projects", "~/dev"]` | Dónde buscar un clon local del repo elegido (comparando `git remote get-url origin`). Si no hay ninguno, se ofrece clonarlo en la primera entrada o en una ruta que escriba el usuario. |
 

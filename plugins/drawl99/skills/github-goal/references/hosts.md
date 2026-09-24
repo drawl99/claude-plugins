@@ -11,6 +11,7 @@ necesitaba.
 | Invocar `workflow-decision` | `/drawl99:workflow-decision` o pedirlo | `/workflow-decision` o pedirlo | `/skill:workflow-decision` o pedirlo |
 | Preguntar al usuario con opciones (elegir repo, alcance, modo, ruta…) | `AskUserQuestion` | `question` | `ask_user_question` (paquete `@juicesharp/rpiv-ask-user-question`). Sin él, pregunta en texto plano con las opciones numeradas y **detente** hasta la respuesta. |
 | Sub-agente | `Agent` (tipo `general-purpose`) | `task` (sub-agente `general` o el que el usuario tenga configurado) | `subagent_run` y `subagent_result` (paquete `pi-subagents`). Sin él, ver *Sin sub-agentes*, abajo. |
+| Modelo del sub-agente (ruta directa) | parámetro `model` de `Agent` (`opus`, `sonnet`, `haiku`) | si `task` no acepta modelo por llamada, el del sub-agente configurado en `opencode.json` (⚠️ en el chequeo) | si `subagent_run` no acepta modelo por llamada, el configurado en `pi-subagents` (⚠️ en el chequeo) |
 | Revisión de código | `/code-review` | un sub-agente de revisión de solo lectura | un sub-agente de revisión de solo lectura |
 | GitHub | `gh` CLI | `gh` CLI | `gh` CLI |
 | SDD de gentle-ai | skills y agentes `sdd-*`; flujo en `~/.claude/skills/_shared/sdd-orchestrator-workflow.md` | comandos `/sdd-*` y agente `gentle-orchestrator`; skills en `~/.config/opencode/skills/sdd-*` | paquete `gentle-pi` (skills `gentle-ai-*` y sus prompts) |

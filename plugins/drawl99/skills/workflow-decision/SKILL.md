@@ -72,7 +72,10 @@ Después, según quién te invocó:
 - **Pedida directamente** ("¿esta issue va con SDD?"): la respuesta es el bloque.
   No preguntes cuál ruta prefiere: te pidieron una recomendación, dala. Puedes
   cerrar con una línea sobre lo que cambiaría la recomendación, si aplica.
-- **Desde `github-goal`** (antes de implementar una issue): después del bloque,
+- **Desde `github-goal` con ruta `auto`:** no preguntes. El bloque va como
+  comentario en la issue y la ruta recomendada es la que se usa; déjala con su
+  motivo en la descripción del PR.
+- **Desde `github-goal`** (antes de implementar una issue, ruta `ask`): después del bloque,
   una sola pregunta con la herramienta de preguntas del host (`AskUserQuestion`
   en Claude Code, `question` en OpenCode, `ask_user_question` en Pi), con la opción recomendada primero y
   "(Recomendado)" al final de su etiqueta, y la otra ruta con su costo en una

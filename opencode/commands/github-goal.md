@@ -7,4 +7,4 @@ herramienta `skill` y síguela al pie de la letra, usando los equivalentes de
 OpenCode de su `references/hosts.md` (`question` para preguntar, `task` para
 sub-agentes).
 
-Argumentos del usuario (una issue como `#123`, `123` u `owner/repo#123`, o vacío): $ARGUMENTS
+Argumentos del usuario (una issue como `#123`, `123` u `owner/repo#123`, un pedido como "automático milestone X, decide tú la ruta", o vacío): $ARGUMENTS

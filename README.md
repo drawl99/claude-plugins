@@ -48,6 +48,8 @@ Trabaja issues de GitHub de un repositorio en dos modos:
   `/drawl99:github-goal owner/repo#123`. La resuelve y termina.
 - **Automático (goal):** toma una tras otra en orden de milestones (por fecha
   de entrega) y de dependencias, hasta agotarlas.
+  Puede limitarse a un milestone y decidir sola la ruta de cada issue:
+  `/drawl99:github-goal automático milestone "v1.0", decide tú la ruta`.
 
 - **Pregunta en qué repositorio trabajar**, entre los tuyos y los de las
   organizaciones a las que perteneces (con cada cuenta de `gh` si tienes
@@ -63,8 +65,10 @@ Trabaja issues de GitHub de un repositorio en dos modos:
 - **Retoma lo interrumpido:** si una sesión se cortó a mitad de una issue, la
   siguiente encuentra la rama, los cambios sin commitear o en un stash, el PR y
   sus checks, y ofrece seguir desde ahí. Nunca borra ramas ni stashes.
-- Por cada issue recomienda **SDD completo** o **flujo directo**, explica por
-  qué y te deja elegir. Los criterios están en
+- Por cada issue recomienda **SDD completo** o **flujo directo** y explica por
+  qué. En una issue te deja elegir; en automático pregunta una sola vez si
+  decide ella la ruta de cada issue (o `"defaultRoute": "auto"` en tus
+  preferencias) y deja el porqué en la issue y en el PR. Los criterios están en
   la skill [`workflow-decision`](plugins/drawl99/skills/workflow-decision/SKILL.md).
 - Solo toma issues abiertas, asignadas a ti o sin asignar (las sin asignar se
   te asignan al tomarlas), con `agent-ready` si el repo tiene ese label, y sin
@@ -98,7 +102,8 @@ mergeado con la issue abierta y ofrece cerrarla.
 
 **Cómo trabaja:** la sesión principal orquesta (issues, git, PRs, preguntas) y
 el trabajo pesado lo hacen sub-agentes: en la ruta directa, uno implementa y
-verifica con TDD; en la ruta SDD, las fases del SDD de **gentle-ai**, cada una
+verifica con TDD, con el modelo según la etapa (opus para planear y revisar,
+sonnet para implementar y corregir; configurable con `models`); en la ruta SDD, las fases del SDD de **gentle-ai**, cada una
 en su propio agente. Así una corrida automática encadena issues sin llenar el
 contexto.
 
@@ -129,8 +134,9 @@ Dos archivos opcionales en JSON. El formato completo está en
 - **Por persona**, `~/.config/drawl99/github-goal.json` (o `~/.claude/github-goal.json`; no se versiona): el modo por
   defecto (`defaultMode`: `ask`, `single` o `goal`), hasta dónde llega (`stopAt`: `pr` o `merge`), cuántas issues por corrida (`maxIssues`),
   si confirma cada issue (`confirmEachIssue`), qué ruta de trabajo usa por
-  defecto (`defaultRoute`: `ask`, `direct` o `sdd`), si ofrece tomar issues
-  ajenas que te bloquean (`takeBlockingIssues`: `ask` o `never`), qué cuenta de
+  defecto (`defaultRoute`: `ask`, `auto`, `direct` o `sdd`), si ofrece tomar issues
+  ajenas que te bloquean (`takeBlockingIssues`: `ask` o `never`), el modelo de
+  cada etapa de la ruta directa (`models`), qué cuenta de
   `gh` usar por organización (`githubAccounts`) y dónde buscar clones locales
   (`workspaceDirs`).
 

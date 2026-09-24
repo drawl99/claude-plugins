@@ -1,7 +1,7 @@
 ---
 name: github-goal
 description: Trabaja issues de GitHub de un repositorio elegido por el usuario, una elegida o todas en automático en orden de milestones y dependencias. Verifica requisitos, pregunta el repositorio, el alcance y el modo al arrancar y, por cada issue, recomienda si usar SDD completo o flujo directo antes de implementar.
-argument-hint: "[#123 | owner/repo#123]"
+argument-hint: "[#123 | owner/repo#123 | automático [milestone] [decide la ruta]]"
 disable-model-invocation: true
 ---
 
@@ -35,6 +35,24 @@ Su formato, sus valores por defecto y la precedencia están en
   de ese. No se preguntan el alcance ni el modo.
 - `owner/repo#123` (o la URL de la issue): esa issue de ese repositorio. No se
   preguntan el repositorio, el alcance ni el modo.
+
+Además, el argumento (o el mensaje con que se invocó) puede pedir en lenguaje
+natural cómo correr, por ejemplo
+`/drawl99:github-goal automático milestone "v1.0", decide tú la ruta`.
+Interprétalo así, y lo que no diga se resuelve como indican los pasos:
+
+- **Repositorio:** un `owner/repo` → ese repositorio (1.1), sin preguntarlo.
+- **Modo:** "automático", "auto", "goal", "todas", "hasta terminar" → automático.
+- **Milestone:** un título de milestone → alcance de la corrida (1.3), sin
+  preguntarlo. Resuélvelo contra los milestones abiertos del repo
+  (`gh api "repos/<owner>/<repo>/milestones?state=open&per_page=100"`); si
+  coincide con más de uno o con ninguno, pregunta con los candidatos como
+  opciones. "Sin milestone" → ese alcance.
+- **Ruta:** "decide tú", "estima tú", "sin preguntar la ruta" → `auto` (Paso 2);
+  "todo directo" → `direct`; "todo con SDD" → `sdd`; "pregúntame" → `ask`.
+
+Lo dicho en la invocación gana sobre las preferencias (ver *Precedencia* en
+[references/config.md](references/config.md)).
 
 ## Paso 0: chequeo de requisitos generales
 
@@ -98,6 +116,9 @@ Si el argumento fija la issue, el alcance es esa issue: no preguntes. Léela con
 `gh issue view <n> -R <owner/repo> --json number,title,state,body,labels,assignees,milestone,comments,url`
 y `gh api repos/<owner>/<repo>/issues/<n>` (trae `issue_dependencies_summary`
 y `sub_issues_summary`).
+
+Si la invocación nombra un milestone o "Sin milestone" (ver *Argumentos*), ese
+es el alcance: no preguntes.
 
 Si no:
 
@@ -166,6 +187,14 @@ Cómo se decide:
    de *Selección*. Si no las cumple, di cuál falla y termina: elegirla a mano no
    saltea `needs-spec`, `blocking`, los bloqueantes abiertos, las sub-issues
    abiertas ni la asignación.
+5. En **automático**, fija la ruta **una sola vez**, antes de reclamar la
+   primera issue, y no la vuelvas a preguntar en la corrida: la de la
+   invocación; si no, `defaultRoute`. Si es `"ask"`, pregunta una vez: "Decido
+   yo la ruta de cada issue (Recomendado)" (queda `auto`) o "Pregúntame en cada
+   issue" (queda `ask`). El alcance ya quedó fijo en el 1.3: con un milestone
+   como alcance, la corrida trabaja solo ese y termina cuando no le quedan
+   issues disponibles. Muestra el plan en una línea antes de arrancar:
+   repositorio, alcance, ruta, `stopAt` y `maxIssues`.
 
 ## Paso 3: base sana
 
@@ -188,7 +217,8 @@ posibles:
 
 - **Milestones:** los abiertos, por `due_on` ascendente; los que no tienen
   fecha van después, por número. Agota un milestone antes de pasar al
-  siguiente.
+  siguiente. Si el alcance es un milestone, solo cuenta ese: las issues de
+  otros milestones o sin milestone no se toman, aunque estén disponibles.
 - **Issues sin milestone:** son un grupo aparte, según `unmilestoned` de la
   config del repo: `"last"` (por defecto) al final, `"first"` antes del primer
   milestone, `"skip"` no entran en "Todas en orden" (se pueden elegir igual con
@@ -252,9 +282,11 @@ usuario: puedes ofrecerlo, nunca hacerlo solo.
 
 En modo **automático**: si `confirmEachIssue` es `true`, antes de reclamar cada
 issue pregunta si tomarla o saltarla. Si no queda ninguna disponible en un
-grupo (milestone o sin milestone), pasa al siguiente. Si no queda ninguna en
-ningún grupo del alcance, o se alcanzó `maxIssues`, termina y reporta qué quedó
-y por qué.
+grupo (milestone o sin milestone), pasa al siguiente, salvo que el alcance sea
+ese solo grupo: entonces termina. Si no queda ninguna en ningún grupo del
+alcance, o se alcanzó `maxIssues`, termina y reporta qué quedó y por qué (con
+un milestone como alcance: cuáles de ese milestone siguen abiertas y qué las
+frena).
 
 En modo **una issue**, la issue ya está elegida (Paso 2): `confirmEachIssue` y
 `maxIssues` no aplican.
@@ -268,10 +300,18 @@ En modo **una issue**, la issue ya está elegida (Paso 2): `confirmEachIssue` y
    estado (ver *Estados en GitHub*).
 2. **Decisión de flujo.** Lee la issue completa y el código que toca, y
    recomienda SDD completo o flujo directo con la skill `workflow-decision` de
-   este plugin ([../workflow-decision/SKILL.md](../workflow-decision/SKILL.md)). Con
-   `defaultRoute: "ask"` (el valor por defecto) pregunta con `AskUserQuestion`,
-   con la recomendada primero. Con `"direct"` o `"sdd"`, usa esa ruta salvo que
-   la recomendación sea la otra con señales fuertes: en ese caso pregunta igual.
+   este plugin ([../workflow-decision/SKILL.md](../workflow-decision/SKILL.md)).
+   Según la ruta de la corrida (Paso 2; en una issue, `defaultRoute`):
+   - `"ask"` (por defecto en una issue): pregunta con `AskUserQuestion`, con la
+     recomendada primero.
+   - `"auto"`: usa la recomendada **sin preguntar**. Deja el bloque de la
+     recomendación como comentario en la issue
+     (`gh issue comment <n> -R <owner/repo> --body ...`) y di la ruta en una
+     línea al usuario. La única excepción es una ambigüedad de negocio que
+     impide decidir (la issue en realidad necesita spec): no la implementes,
+     comenta qué falta, sáltala y sigue con la siguiente; al final repórtala.
+   - `"direct"` o `"sdd"`: usa esa ruta salvo que la recomendación sea la otra
+     con señales fuertes: en ese caso pregunta igual.
 3. **Rama.** Desde la rama base actualizada (Paso 1.4), créala enlazada a la
    issue:
    `gh issue develop <n> -R <owner/repo> --base <base> --name <rama> --checkout`
@@ -296,9 +336,10 @@ En modo **una issue**, la issue ya está elegida (Paso 2): `confirmEachIssue` y
      su dispatcher), de `sdd-new` a `verify`, automático salvo ambigüedad real
      de negocio. Su preflight de sesión se completa con `sdd` de la config del
      repo, sin preguntar en cada issue.
-   - **Directo:** la sesión principal deja el plan en 3 a 6 líneas en un
-     comentario de la issue; un sub-agente implementa con TDD y verifica, y
-     devuelve un reporte corto.
+   - **Directo:** el plan en 3 a 6 líneas va en un comentario de la issue; un
+     sub-agente implementa con TDD y verifica, y devuelve un reporte corto.
+     Cada sub-agente usa el modelo de su etapa: opus para planear y revisar,
+     sonnet para implementar y corregir (`models` en las preferencias).
    - En ambos casos sigue las convenciones del repositorio (`CLAUDE.md`,
      `AGENTS.md`): TDD, cobertura y estilo. Si Engram está disponible, guarda
      las decisiones y los descubrimientos a medida que aparecen.

@@ -55,23 +55,46 @@ corre en su propio sub-agente, así que el contexto queda protegido por diseño.
 Un sub-agente por etapa, en orden. Cada uno recibe lo necesario para trabajar
 sin leer la conversación, y devuelve un reporte corto.
 
-| Etapa | Sub-agente | Recibe | Devuelve |
-|---|---|---|---|
-| Implementación | uno solo que escribe (`general-purpose` en Claude Code; equivalentes en [hosts.md](hosts.md)) | la issue completa, el plan, la ruta del checkout y la rama (ya creada; que no cambie de rama ni commitee), las convenciones del repo (`CLAUDE.md`), los comandos de `verify` que aplican, TDD estricto si el repo lo exige | archivos tocados, evidencia del test en rojo antes del cambio y en verde después, resultado de la suite, lo que no pudo verificar |
-| Revisión | `/code-review` en Claude Code; en otros hosts, un sub-agente de revisión de solo lectura | el diff de la rama | hallazgos, del más grave al menos grave |
-| Correcciones de la revisión | el mismo sub-agente de implementación si sigue disponible, o uno nuevo con el reporte anterior | solo los hallazgos de esta issue | lo mismo que la implementación |
+| Etapa | Sub-agente | Modelo | Recibe | Devuelve |
+|---|---|---|---|---|
+| Plan (solo si entenderlo exige leer 4 archivos o más) | uno de solo lectura | `plan` (opus) | la issue completa, la ruta del checkout, la rama base, las convenciones del repo | el plan en 3 a 6 líneas y los archivos que toca, con la razón de cada decisión no obvia |
+| Implementación | uno solo que escribe (`general-purpose` en Claude Code; equivalentes en [hosts.md](hosts.md)) | `implement` (sonnet) | la issue completa, el plan, la ruta del checkout y la rama (ya creada; que no cambie de rama ni commitee), las convenciones del repo (`CLAUDE.md`), los comandos de `verify` que aplican, TDD estricto si el repo lo exige | archivos tocados, evidencia del test en rojo antes del cambio y en verde después, resultado de la suite, lo que no pudo verificar |
+| Revisión | `/code-review` en Claude Code; en otros hosts, un sub-agente de revisión de solo lectura | `review` (opus) solo en el sub-agente; `/code-review` usa el suyo | el diff de la rama | hallazgos, del más grave al menos grave |
+| Correcciones de la revisión | el mismo sub-agente de implementación si sigue disponible, o uno nuevo con el reporte anterior | `fix` (sonnet) | solo los hallazgos de esta issue | lo mismo que la implementación |
 
 - **Un solo sub-agente escribe a la vez.** Nunca dos escribiendo en paralelo
   sobre la misma rama.
-- **El plan lo escribe la sesión principal** (3 a 6 líneas, en el comentario de
-  la issue) a partir de la issue y de una lectura puntual. Si entender el cambio
-  exige leer 4 archivos o más, pídele el mapa a un sub-agente de exploración de
-  solo lectura antes de escribir el plan.
+- **El plan** (3 a 6 líneas, en el comentario de la issue) lo escribe la sesión
+  principal si sale de la issue y de una lectura puntual. Si entender el cambio
+  exige leer 4 archivos o más, lo escribe el sub-agente de plan, y la sesión
+  principal lo revisa y lo publica.
 - **Pide reportes cortos:** hechos verificables (archivos, conteos de tests,
   líneas clave de error), no el log completo. Si un reporte afirma algo
   importante, compruébalo con una lectura puntual o un comando corto antes de
   darlo por cierto.
 - Commit, push, PR y comentarios en las issues los hace la sesión principal.
+
+### Modelo por etapa
+
+La regla es simple: **lo que exige razonar (planear, revisar) va con opus; lo
+que ejecuta (escribir código, correr pruebas, corregir hallazgos concretos) va
+con sonnet.** Los modelos de cada etapa salen de `models` en las preferencias
+personales ([config.md](config.md)); sin esa clave, los de la tabla.
+
+- En Claude Code, pásalo en el parámetro `model` de `Agent`. En otros hosts,
+  si la herramienta de sub-agentes acepta un modelo por llamada, pásalo; si no,
+  usa el del host y dilo una vez en el chequeo de requisitos (ver
+  [hosts.md](hosts.md)).
+- **Escalada:** si la implementación con sonnet termina con pruebas que no pasan
+  y no sabe por qué (no por el entorno), el reintento va con el modelo de
+  `plan`, con el reporte anterior. Una sola vez; si sigue fallando, detente y
+  avisa. Escala también de entrada si la issue toca seguridad, dinero o
+  concurrencia, aunque vaya directa: ahí un error de criterio es caro.
+- Si no tienes acceso al modelo pedido (por ejemplo, sin opus), usa sonnet y
+  sigue.
+- Esto es **solo para la ruta directa**. En la ruta SDD, gentle-ai asigna el
+  modelo de cada fase con su propia tabla: no la pises.
+- `"inherit"` en una etapa usa el modelo de la sesión principal.
 
 ## Entre issues, en modo automático
 
