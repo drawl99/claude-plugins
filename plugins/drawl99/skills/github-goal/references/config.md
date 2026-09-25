@@ -28,7 +28,7 @@ trabaje en ese repo. Describe el repositorio, nunca a una persona.
   ],
   "requiredChecks": ["ci"],
   "language": { "commits": "en", "pullRequests": "es" },
-  "sdd": { "artifactStore": "hybrid", "deliveryStrategy": "single-pr", "reviewBudgetLines": 800 }
+  "sdd": { "artifactStore": "hybrid" }
 }
 ```
 
@@ -43,7 +43,7 @@ trabaje en ese repo. Describe el repositorio, nunca a una persona.
 | `estimateLabels` | Labels de estimado para issues derivadas, por puntos (`1`, `2`, `3`, `5`, `8`, `13`). | Se buscan labels `size:*` o `size/*` en el repo; si no hay, el estimado va en una línea de la descripción. |
 | `verify` | Qué correr localmente antes de abrir el PR, según los archivos tocados. `paths` son globs relativos a la raíz; `{service}` se reemplaza por el primer segmento que coincide con `*`. Se corren **todas** las entradas cuyos `paths` toquen el cambio. | Se toma de `CLAUDE.md`/`AGENTS.md`. Si tampoco está ahí, se pregunta una vez. |
 | `requiredChecks` | Nombres de workflows o checks de GitHub que tienen que estar en verde en el PR antes de mergear. | Todos los checks que GitHub reporte en el PR. |
-| `sdd` | Valores del preflight de sesión del SDD de gentle-ai, para que no pregunte en cada issue: `artifactStore` (`openspec`, `engram` o `hybrid`), `deliveryStrategy` (`ask-on-risk`, `single-pr` o `auto-chain`) y `reviewBudgetLines` (número). El ritmo siempre es `auto` dentro de `github-goal`. | Se pregunta una vez por corrida, la primera vez que una issue va por SDD. |
+| `sdd` | Respuesta recomendada de artefactos en el preflight de sesión del SDD de gentle-ai: `artifactStore` (`openspec` → OpenSpec, `engram` → Engram, `hybrid` → Both). Las otras dos recomendadas son fijas: ritmo Automatic y estrategia de PR Single PR. En automático, `github-goal` corre ese preflight una vez por sesión antes de la primera issue; en una issue lo pide gentle-ai. La respuesta siempre la da el usuario. `deliveryStrategy` y `reviewBudgetLines` se ignoran desde 2.0.0 (el presupuesto de revisión de gentle-ai es fijo): si están, avísalo en el chequeo del repo. | Se recomienda Engram. |
 | `language` | Idioma de commits (`commits`) y de descripciones de PR (`pullRequests`), como código ISO (`es`, `en`). | Se imita el idioma de los últimos commits y PRs del repo. |
 
 **Si el archivo no existe**, ofrece crearlo al terminar el chequeo del
@@ -67,9 +67,9 @@ repo.
   "stopAt": "pr",
   "maxIssues": null,
   "confirmEachIssue": false,
-  "defaultRoute": "ask",
   "takeBlockingIssues": "ask",
-  "models": { "plan": "opus", "implement": "sonnet", "review": "opus", "fix": "sonnet" },
+  "reviewConsent": "granted",
+  "sizeException": "accept",
   "githubAccounts": { "mi-org": "mi-cuenta-de-trabajo" },
   "workspaceDirs": ["~/Desktop", "~/code", "~/projects", "~/dev"]
 }
@@ -81,14 +81,18 @@ repo.
 | `stopAt` | `"pr"` \| `"merge"` | `"pr"` | Con `"pr"`, el flujo termina cada issue al abrir el PR con CI en verde, y sigue con la siguiente solo si sus bloqueantes no dependen de ese PR. Con `"merge"`, mergea cuando el CI está verde (nunca una issue `security`) y cierra la issue si la base no es la rama por defecto. |
 | `maxIssues` | número o `null` | `null` | Solo en modo automático: cuántas issues trabajar en una corrida. `null` significa hasta agotar las disponibles. |
 | `confirmEachIssue` | `true` \| `false` | `false` | Solo en modo automático: con `true`, antes de reclamar cada issue pregunta si tomarla o saltarla. |
-| `defaultRoute` | `"ask"` \| `"auto"` \| `"direct"` \| `"sdd"` | `"ask"` | Con `"ask"`, en una issue muestra la recomendación y pregunta; en automático pregunta **una vez** al arrancar si decide la ruta sola o pregunta en cada issue. Con `"auto"`, usa la ruta recomendada sin preguntar y deja el porqué en la issue y en el PR. Con `"direct"` o `"sdd"`, usa esa ruta sin preguntar, salvo que la recomendación sea la otra con señales fuertes: en ese caso pregunta igual. Si SDD no está instalado, `"sdd"` se trata como `"ask"`. |
 | `takeBlockingIssues` | `"ask"` \| `"never"` | `"ask"` | Cuando estás bloqueado por una issue asignada a otra persona que nadie empezó, con `"ask"` te ofrece tomarla (siempre preguntando, nunca sola). Con `"never"`, solo reporta el bloqueo. Ver *Desbloqueo* en `SKILL.md`. |
-| `models` | objeto `{ "plan", "implement", "review", "fix" }`, cada uno `"opus"` \| `"sonnet"` \| `"haiku"` \| `"inherit"` | `plan` y `review` en `"opus"`, `implement` y `fix` en `"sonnet"` | Solo ruta directa: el modelo de cada sub-agente. Las etapas que no pongas usan el valor por defecto. `"inherit"` usa el modelo de la sesión. Escalada y reglas: *Modelo por etapa* en [execution.md](execution.md). En la ruta SDD manda gentle-ai. |
+| `reviewConsent` | `"granted"` o ausente | ausente | Solo en modo automático, con RDD encendido: con `"granted"`, cuando la revisión nativa de gentle-ai pide consentimiento para un candidato, se ejecuta exactamente la invocación de su opción `granted` y queda registrado en la issue y en el PR. Es la autorización explícita y permanente del usuario; sin ella (o con cualquier otro valor, que cuenta como ausente) se le pregunta al usuario. En modo una issue siempre se pregunta. Ver *Consentimiento de revisión* en [execution.md](execution.md). |
+| `sizeException` | `"accept"` o ausente | ausente | Solo en modo automático: la aceptación explícita y por adelantado de `size:exception` del usuario. Con `"accept"`, a gentle-ai se le indica `delivery_strategy: exception-ok` (ODD y SDD), y un PR que supera el presupuesto de revisión lleva el label `size:exception` (se crea si falta) y el tamaño y el porqué en el PR y en la issue. Sin ella (o con cualquier otro valor, que cuenta como ausente), `single-pr`, y si gentle-ai pide `size:exception`, se le pregunta al usuario. Ver *Tamaño del PR* en [execution.md](execution.md). |
 | `githubAccounts` | objeto `{ "<owner>" o "<owner>/<repo>": "<cuenta de gh>" }` | vacío | Para quien tiene varias cuentas de GitHub en `gh`: qué cuenta usar en cada organización o repo. La clave más específica gana (`owner/repo` antes que `owner`). Se usa para listar repos al elegir y para todas las llamadas sobre el repo elegido, con `GH_TOKEN=$(gh auth token -u <cuenta>)`; la cuenta activa global no se toca. La cuenta tiene que estar logueada (`gh auth status`). |
 | `workspaceDirs` | lista de directorios | `["~/Desktop", "~/code", "~/projects", "~/dev"]` | Dónde buscar un clon local del repo elegido (comparando `git remote get-url origin`). Si no hay ninguno, se ofrece clonarlo en la primera entrada o en una ruta que escriba el usuario. |
 
 Un valor inválido no se adivina: se informa en el chequeo de requisitos y se
 usa el valor por defecto.
+
+**Claves retiradas en 2.0.0:** `defaultRoute` y `models`. La ruta de cada issue
+(directo o SDD) y los modelos de los sub-agentes los decide gentle-ai. Si
+siguen en el archivo, no fallan: el chequeo de requisitos avisa que se ignoran.
 
 ## Precedencia
 

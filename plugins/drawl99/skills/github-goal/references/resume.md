@@ -31,6 +31,9 @@ tu login, con `gh api user -q .login`):
      `#<n>`);
    - PR (`gh pr list -R <owner/repo> --head <rama> --state all --json number,state,mergeable,baseRefName`)
      y, si está abierto, sus checks;
+   - si gentle-ai la trabajó como sustancial: su documento `odd/tasks/<feature>.md`
+     en la rama y su espejo `odd/<feature>/tasks` en Engram (tareas hechas y
+     pendientes);
    - si usó SDD: su carpeta en `openspec/changes/` o su `apply-progress` en Engram.
 3. **PRs mergeados con la issue abierta:** tus PRs mergeados en una rama base
    que no es la rama por defecto
@@ -47,7 +50,8 @@ No busques en otros repos: el trabajo pendiente se busca en el repo elegido.
 
 | Estado encontrado | Desde dónde sigue |
 |---|---|
-| Reclamada, sin rama ni PR | Reclamo viejo. Empieza en la *Decisión de flujo*; si hay un comentario de plan, reúsalo. |
+| Reclamada, sin rama ni PR | Reclamo viejo. Sigue desde la *Rama* y entrégasela a gentle-ai como una issue nueva. |
+| Rama con un documento de ODD o un cambio SDD a medias | Entrégasela a gentle-ai para que retome la feature o el cambio desde la siguiente tarea pendiente (ODD reconcilia el documento con su espejo en Engram); no la vuelvas a empezar. |
 | Rama con cambios sin commitear o en un stash | Recupéralos (`git stash apply`, nunca `pop` ni `drop`) y trátalos como **no verificados**: sigue desde la *Verificación local*. |
 | Rama con commits, sin PR | Sigue desde la *Verificación local*: no abras PR sobre trabajo que nadie verificó en esta sesión. |
 | PR abierto, checks en rojo | Sigue desde *CI y merge*: corrige si es tu cambio. |

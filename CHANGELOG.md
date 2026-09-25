@@ -8,6 +8,59 @@ Cambios del plugin `drawl99`. Formato basado en
 Para actualizar: `/plugin marketplace update drawl99` y después
 `/plugin update drawl99@drawl99`, y reinicia Claude Code.
 
+## [2.0.0] — 2026-09-25
+
+Cambio incompatible en la configuración personal: `defaultRoute` y `models` se
+retiraron.
+
+### Cambiado
+- `github-goal` ya no decide la ruta ni implementa: por cada issue, después del
+  reclamo y la rama, se la entrega a **gentle-ai** (3.7.0 o más), que la
+  trabaja con su protocolo por defecto, ODD (explora, clasifica chica o
+  sustancial, `odd/tasks/<feature>.md` y commits de unidad de trabajo). La
+  skill conserva el flujo de GitHub (repo, alcance, modo, base sana, selección,
+  reclamo, rama, verificación, un PR con `Fixes`, CI, merge, archivo SDD,
+  desbloqueo, issues derivadas) y le pide a gentle-ai entrega `single-pr`.
+- Si gentle-ai propone SDD, se acepta sola en los dos modos y corre la cadena
+  SDD. En la issue y en el PR queda qué ruta tomó gentle-ai y por qué.
+- Revisión: con RDD de gentle-ai encendido (`gentle-ai review mode status`),
+  revisa RDD y no se corre `/code-review`; con RDD apagado, `/code-review` como
+  antes. RDD se enruta solo por las transiciones de
+  `gentle-ai review status ... --next-transition`.
+- Comandos SDD de Claude Code renombrados por gentle-ai 3.7.0: `/sdd-*` →
+  `/gentle-sdd-*` (por ejemplo, `/gentle-sdd-archive`).
+- Pi: las preguntas y los sub-agentes vienen del paquete `gentle-pi`
+  (`ask_user_question` propio desde gentle-ai 3.6.1, que quita
+  `@juicesharp/rpiv-ask-user-question`).
+- gentle-ai pasa a ser requisito (❌ sin él), y el chequeo muestra el modo de
+  RDD.
+- `workflow-decision` queda como skill asesora independiente: `github-goal` ya
+  no la usa.
+
+### Agregado
+- `reviewConsent: "granted"` en las preferencias personales: en modo
+  automático, acepta el consentimiento de revisión de RDD ejecutando
+  exactamente su invocación `granted` y lo registra en la issue y en el PR. Sin
+  esa clave, o en modo una issue, se le pregunta al usuario.
+- `sizeException: "accept"` en las preferencias personales: en modo
+  automático, es la aceptación por adelantado de `size:exception`. gentle-ai
+  recibe `delivery_strategy: exception-ok` (ODD y SDD), y un PR que supera el
+  presupuesto de revisión lleva el label `size:exception` (se crea si falta),
+  con el tamaño y el porqué en el PR y en la issue. Sin esa clave, `single-pr`,
+  y si gentle-ai pide `size:exception`, se le pregunta al usuario.
+- En automático, el preflight de sesión del SDD de gentle-ai se hace una vez,
+  antes de la primera issue, con las respuestas recomendadas por la config
+  (Automatic, el almacén de `sdd.artifactStore`, Single PR) solo en las
+  descripciones de las opciones.
+
+### Quitado
+- `defaultRoute` (ruta `ask`/`auto`/`direct`/`sdd`), la ruta directa propia con
+  sub-agentes de plan, implementación, revisión y corrección, y `models` (con
+  su escalada). Si siguen en las preferencias, el chequeo avisa que se ignoran.
+- `sdd.deliveryStrategy` y `sdd.reviewBudgetLines` en la config del repo: la
+  estrategia es siempre `single-pr` y el presupuesto de revisión de gentle-ai
+  es fijo. `sdd.artifactStore` queda como respuesta recomendada del preflight.
+
 ## [1.2.0] — 2026-09-24
 
 ### Agregado

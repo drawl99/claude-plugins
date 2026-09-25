@@ -31,10 +31,10 @@ con `gh`: tu cuenta activa de `gh` tiene que ver el repo (o exporta
 - OpenCode: vuelve a correr `~/.local/share/drawl99/claude-plugins/scripts/install-opencode.sh` (hace `git pull`).
 - Pi: `pi update git:git@github.com:drawl99/claude-plugins` (con la misma fuente con la que lo instalaste; `pi update` a secas actualiza Pi, no este paquete).
 
-**Qué necesita cada host** para `github-goal`: `gh` autenticado, una
-herramienta de preguntas y una de sub-agentes (en Pi, los paquetes
-`@juicesharp/rpiv-ask-user-question` y `pi-subagents`), y opcionalmente el SDD
-de gentle-ai. El detalle, en
+**Qué necesita cada host** para `github-goal`: `gh` autenticado, gentle-ai
+3.7.0 o más, una herramienta de preguntas y una de sub-agentes (en Pi, las del
+paquete `gentle-pi`, que desde gentle-ai 3.6.1 trae su propio
+`ask_user_question`; `gentle-ai sync` quita `@juicesharp/rpiv-ask-user-question`). El detalle, en
 [`hosts.md`](plugins/drawl99/skills/github-goal/references/hosts.md).
 
 ## Qué incluye
@@ -48,8 +48,8 @@ Trabaja issues de GitHub de un repositorio en dos modos:
   `/drawl99:github-goal owner/repo#123`. La resuelve y termina.
 - **Automático (goal):** toma una tras otra en orden de milestones (por fecha
   de entrega) y de dependencias, hasta agotarlas.
-  Puede limitarse a un milestone y decidir sola la ruta de cada issue:
-  `/drawl99:github-goal automático milestone "v1.0", decide tú la ruta`.
+  Puede limitarse a un milestone:
+  `/drawl99:github-goal automático milestone "v1.0"`.
 
 - **Pregunta en qué repositorio trabajar**, entre los tuyos y los de las
   organizaciones a las que perteneces (con cada cuenta de `gh` si tienes
@@ -65,11 +65,20 @@ Trabaja issues de GitHub de un repositorio en dos modos:
 - **Retoma lo interrumpido:** si una sesión se cortó a mitad de una issue, la
   siguiente encuentra la rama, los cambios sin commitear o en un stash, el PR y
   sus checks, y ofrece seguir desde ahí. Nunca borra ramas ni stashes.
-- Por cada issue recomienda **SDD completo** o **flujo directo** y explica por
-  qué. En una issue te deja elegir; en automático pregunta una sola vez si
-  decide ella la ruta de cada issue (o `"defaultRoute": "auto"` en tus
-  preferencias) y deja el porqué en la issue y en el PR. Los criterios están en
-  la skill [`workflow-decision`](plugins/drawl99/skills/workflow-decision/SKILL.md).
+- Por cada issue, después de reclamarla y crear la rama, **se la entrega a
+  gentle-ai**, que decide la ruta con su protocolo por defecto (ODD: directo,
+  chico o sustancial con `odd/tasks/<feature>.md`) y la implementa con commits
+  de unidad de trabajo. Si gentle-ai propone **SDD**, se acepta sola y corre la
+  cadena `/gentle-sdd-*`. La skill deja en la issue y en el PR qué ruta tomó
+  gentle-ai y por qué, y nunca la vuelve a decidir.
+- **Revisión:** con la revisión nativa de gentle-ai (RDD) encendida, revisa
+  RDD; si está apagada, `/code-review`. En automático, con
+  `"reviewConsent": "granted"` en tus preferencias, acepta sola el
+  consentimiento de revisión y lo deja registrado; si no, te lo pregunta.
+- **Automático sin paradas:** antes de la primera issue hace una vez el
+  preflight de SDD de gentle-ai, con las respuestas recomendadas por la config.
+  Con `"sizeException": "accept"`, un PR que supera el presupuesto de revisión
+  sigue como uno solo, con el label `size:exception` y el porqué.
 - Solo toma issues abiertas, asignadas a ti o sin asignar (las sin asignar se
   te asignan al tomarlas), con `agent-ready` si el repo tiene ese label, y sin
   `needs-spec` ni `blocking`. Los nombres de los labels se configuran.
@@ -100,21 +109,18 @@ el PR se mergeó y la cierra con
 `stopAt: "pr"` (por defecto) te lo avisa, y la próxima corrida detecta el PR
 mergeado con la issue abierta y ofrece cerrarla.
 
-**Cómo trabaja:** la sesión principal orquesta (issues, git, PRs, preguntas) y
-el trabajo pesado lo hacen sub-agentes: en la ruta directa, uno implementa y
-verifica con TDD, con el modelo según la etapa (opus para planear y revisar,
-sonnet para implementar y corregir; configurable con `models`); en la ruta SDD, las fases del SDD de **gentle-ai**, cada una
-en su propio agente. Así una corrida automática encadena issues sin llenar el
-contexto.
+**Cómo trabaja:** la sesión principal orquesta GitHub (issues, ramas, PRs, CI,
+merge, preguntas) y **gentle-ai** decide la ruta, implementa y, con RDD
+encendido, revisa, delegando en sus propios sub-agentes. Así una corrida
+automática encadena issues sin llenar el contexto.
 
-**Requisitos:** solo `gh` autenticado con una cuenta que vea el repositorio.
-Si tienes varias cuentas en `gh`, indica cuál usar por organización con
-`githubAccounts` en tus preferencias; el comando nunca cambia tu cuenta activa.
-El SDD de gentle-ai y Engram son opcionales: sin gentle-ai solo está disponible
-el flujo directo.
+**Requisitos:** `gh` autenticado con una cuenta que vea el repositorio, y
+gentle-ai 3.7.0 o más. Si tienes varias cuentas en `gh`, indica cuál usar por
+organización con `githubAccounts` en tus preferencias; el comando nunca cambia
+tu cuenta activa. Engram es opcional.
 
-Antes de empezar verifica los requisitos (`gh`, cuentas, herramientas del host,
-SDD, Engram) y, con el repo elegido, los del repo (issues habilitadas, árbol
+Antes de empezar verifica los requisitos (`gh`, cuentas, gentle-ai y el modo
+de RDD, herramientas del host, Engram) y, con el repo elegido, los del repo (issues habilitadas, árbol
 limpio, config, label de lista, herramientas de prueba), y muestra qué falta.
 
 #### Configuración
@@ -129,14 +135,15 @@ Dos archivos opcionales en JSON. El formato completo está en
   asignación (`assignee`: `me-or-unassigned` o `me`), nombres de los labels
   (`labels`), labels de prioridad y estimado, qué correr para verificar según
   los archivos tocados, qué checks de CI son obligatorios, en qué idioma van
-  commits y PRs, y los valores del SDD. Si no existe, el comando ofrece crearlo
+  commits y PRs, y el almacén de artefactos recomendado para el SDD. Si no existe, el comando ofrece crearlo
   la primera vez.
 - **Por persona**, `~/.config/drawl99/github-goal.json` (o `~/.claude/github-goal.json`; no se versiona): el modo por
   defecto (`defaultMode`: `ask`, `single` o `goal`), hasta dónde llega (`stopAt`: `pr` o `merge`), cuántas issues por corrida (`maxIssues`),
-  si confirma cada issue (`confirmEachIssue`), qué ruta de trabajo usa por
-  defecto (`defaultRoute`: `ask`, `auto`, `direct` o `sdd`), si ofrece tomar issues
-  ajenas que te bloquean (`takeBlockingIssues`: `ask` o `never`), el modelo de
-  cada etapa de la ruta directa (`models`), qué cuenta de
+  si confirma cada issue (`confirmEachIssue`), si ofrece tomar issues
+  ajenas que te bloquean (`takeBlockingIssues`: `ask` o `never`), si acepta
+  solo el consentimiento de revisión en automático (`reviewConsent`:
+  `granted`), si acepta por adelantado `size:exception` en automático
+  (`sizeException`: `accept`), qué cuenta de
   `gh` usar por organización (`githubAccounts`) y dónde buscar clones locales
   (`workspaceDirs`).
 
@@ -148,9 +155,10 @@ Por defecto se detiene al abrir el PR, no mergea. Para mergear solo:
 
 ### `/drawl99:workflow-decision`
 
-Recomienda si una issue se trabaja con **SDD completo** o **flujo directo**, con
-los motivos sacados de la issue. La usa `github-goal` en cada issue, y también
-se puede pedir sola: "¿esta issue va con SDD?". No necesita GitHub.
+Skill asesora independiente: recomienda si una issue se trabaja con **SDD
+completo** o **flujo directo**, con los motivos sacados de la issue, cuando se
+la pides: "¿esta issue va con SDD?". No necesita GitHub. `github-goal` no la
+usa desde 2.0.0: allí la ruta la decide gentle-ai.
 
 ## Sugerirlo en un repo
 

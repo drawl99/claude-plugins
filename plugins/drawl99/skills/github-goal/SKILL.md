@@ -1,7 +1,7 @@
 ---
 name: github-goal
-description: Trabaja issues de GitHub de un repositorio elegido por el usuario, una elegida o todas en automático en orden de milestones y dependencias. Verifica requisitos, pregunta el repositorio, el alcance y el modo al arrancar y, por cada issue, recomienda si usar SDD completo o flujo directo antes de implementar.
-argument-hint: "[#123 | owner/repo#123 | automático [milestone] [decide la ruta]]"
+description: Trabaja issues de GitHub de un repositorio elegido por el usuario, una elegida o todas en automático en orden de milestones y dependencias. Verifica requisitos, pregunta el repositorio, el alcance y el modo al arrancar y, por cada issue, la entrega a gentle-ai, que decide la ruta (directo o SDD) y la implementa, y después abre el PR y sigue el CI.
+argument-hint: "[#123 | owner/repo#123 | automático [milestone]]"
 disable-model-invocation: true
 ---
 
@@ -21,6 +21,11 @@ usa los equivalentes de [references/hosts.md](references/hosts.md) (preguntas,
 sub-agentes, revisión, SDD de gentle-ai). GitHub se usa con `gh` en todos los
 hosts: no hace falta ningún MCP.
 
+**División del trabajo:** esta skill orquesta el flujo de GitHub. La decisión
+entre directo y SDD, la implementación y (con RDD encendido) la revisión son de
+**gentle-ai**; esta skill no las repite ni las vuelve a decidir. Detalle en
+[references/execution.md](references/execution.md).
+
 Se adapta a cada repositorio y a cada persona con dos archivos opcionales:
 `.claude/github-goal.json` en el repo y, en el home,
 `~/.config/drawl99/github-goal.json` (o `~/.claude/github-goal.json`).
@@ -38,7 +43,7 @@ Su formato, sus valores por defecto y la precedencia están en
 
 Además, el argumento (o el mensaje con que se invocó) puede pedir en lenguaje
 natural cómo correr, por ejemplo
-`/drawl99:github-goal automático milestone "v1.0", decide tú la ruta`.
+`/drawl99:github-goal automático milestone "v1.0"`.
 Interprétalo así, y lo que no diga se resuelve como indican los pasos:
 
 - **Repositorio:** un `owner/repo` → ese repositorio (1.1), sin preguntarlo.
@@ -48,8 +53,8 @@ Interprétalo así, y lo que no diga se resuelve como indican los pasos:
   (`gh api "repos/<owner>/<repo>/milestones?state=open&per_page=100"`); si
   coincide con más de uno o con ninguno, pregunta con los candidatos como
   opciones. "Sin milestone" → ese alcance.
-- **Ruta:** "decide tú", "estima tú", "sin preguntar la ruta" → `auto` (Paso 2);
-  "todo directo" → `direct`; "todo con SDD" → `sdd`; "pregúntame" → `ask`.
+
+La ruta de cada issue no se pide en la invocación: la decide gentle-ai.
 
 Lo dicho en la invocación gana sobre las preferencias (ver *Precedencia* en
 [references/config.md](references/config.md)).
@@ -63,10 +68,12 @@ una tabla con el resultado de cada punto (✅ / ⚠️ / ❌ y una línea de det
 |---|---|---|
 | `gh` autenticado | `gh auth status` muestra al menos una cuenta logueada en github.com | ❌ detente y sugiere `gh auth login` |
 | Cuentas de GitHub | las cuentas de `gh auth status` y las de `githubAccounts` en las preferencias | si `githubAccounts` nombra una cuenta que no está logueada, ⚠️ y sigue con las demás |
-| Preferencias personales | `~/.config/drawl99/github-goal.json` o `~/.claude/github-goal.json` existe y sus valores son válidos | ⚠️ se usan los valores por defecto (informa cuáles) |
-| SDD de gentle-ai | `gentle-ai --version` responde y las skills y agentes `sdd-*` están disponibles | ⚠️ solo flujo directo; sugiere instalar gentle-ai |
+| Preferencias personales | `~/.config/drawl99/github-goal.json` o `~/.claude/github-goal.json` existe y sus valores son válidos | ⚠️ se usan los valores por defecto (informa cuáles). Si tiene `defaultRoute` o `models`, ⚠️ se ignoran desde 2.0.0: la ruta y los modelos son de gentle-ai |
+| gentle-ai | `gentle-ai --version` da 3.7.0 o más, y su orquestador (ODD) y las skills y agentes `sdd-*` están disponibles | ❌ detente y sugiere instalar o actualizar gentle-ai: la ruta y la implementación dependen de él |
+| Preferencias de automático | `reviewConsent` y `sizeException` en las preferencias personales: solo valen `"granted"` y `"accept"`; cualquier otro valor cuenta como ausente | informativo: muestra si cada una está activa. Solo aplican en modo automático (ver [references/execution.md](references/execution.md)) |
+| Revisión (RDD) | `gentle-ai review mode status` (solo lectura): modo efectivo y quién lo decide | informativo: encendido → revisa RDD; apagado → `/code-review` (ver [references/execution.md](references/execution.md)). Nunca cambies el modo |
 | Engram | las herramientas `mem_*` están disponibles | ⚠️ las decisiones quedan solo en GitHub (issue y PR) |
-| Preguntas y sub-agentes del host | existen la herramienta de preguntas y la de sub-agentes del host ([references/hosts.md](references/hosts.md)) | ⚠️ sin preguntas nativas, pregunta en texto y se detiene; sin sub-agentes, la ruta directa corre en la sesión principal y la llena más rápido |
+| Preguntas y sub-agentes del host | existen la herramienta de preguntas y la de sub-agentes del host ([references/hosts.md](references/hosts.md)) | ⚠️ sin preguntas nativas, pregunta en texto y se detiene; sin sub-agentes, gentle-ai trabaja en la sesión principal y la llena más rápido |
 
 Con algún ❌ no sigas. Con solo ⚠️, sigue y tenlos en cuenta.
 
@@ -102,7 +109,7 @@ que en el Paso 0:
 | Issues habilitadas | `hasIssuesEnabled` es `true` | ❌ detente |
 | Checkout | el `origin` del checkout apunta al repo elegido | ❌ detente |
 | Árbol limpio | `git -C <ruta> status --porcelain` vacío | si hay cambios y la rama actual es la de una issue tuya reclamada (enlazada con `gh issue develop --list <n>` o con el nombre de `branchPattern`), es trabajo para retomar (⚠️, ver Paso 1b). Si no, ❌ detente: no mezcles trabajo ajeno con una issue |
-| Config del repo | `.claude/github-goal.json` existe en el checkout y es JSON válido | ⚠️ se usan los valores por defecto y se pregunta lo que falte; si existe pero es inválido, ❌ detente y muestra el error |
+| Config del repo | `.claude/github-goal.json` existe en el checkout y es JSON válido | ⚠️ se usan los valores por defecto y se pregunta lo que falte; si existe pero es inválido, ❌ detente y muestra el error. Si tiene `sdd.deliveryStrategy` o `sdd.reviewBudgetLines`, ⚠️ se ignoran desde 2.0.0 |
 | Label de lista | existe un label con el nombre exacto de `labels.ready` (`gh label list -R <owner/repo> --search <nombre> --json name`, comparando el nombre exacto) | ⚠️ el requisito del label de lista queda apagado para este repo: dilo y ofrece crearlo (`gh label create`), nunca sin permiso |
 | Comandos de verificación | los de `verify` en la config, o los que declare `CLAUDE.md`/`AGENTS.md` | ⚠️ se preguntarán al tomar la primera issue |
 | Herramientas de verificación | los ejecutables que usan esos comandos existen (`mvnw`, `pnpm`, `docker` si hay Testcontainers…) | ⚠️ avisa qué falta: esas pruebas no van a poder correr localmente |
@@ -187,14 +194,16 @@ Cómo se decide:
    de *Selección*. Si no las cumple, di cuál falla y termina: elegirla a mano no
    saltea `needs-spec`, `blocking`, los bloqueantes abiertos, las sub-issues
    abiertas ni la asignación.
-5. En **automático**, fija la ruta **una sola vez**, antes de reclamar la
-   primera issue, y no la vuelvas a preguntar en la corrida: la de la
-   invocación; si no, `defaultRoute`. Si es `"ask"`, pregunta una vez: "Decido
-   yo la ruta de cada issue (Recomendado)" (queda `auto`) o "Pregúntame en cada
-   issue" (queda `ask`). El alcance ya quedó fijo en el 1.3: con un milestone
+5. En **automático**, el alcance ya quedó fijo en el 1.3: con un milestone
    como alcance, la corrida trabaja solo ese y termina cuando no le quedan
-   issues disponibles. Muestra el plan en una línea antes de arrancar:
-   repositorio, alcance, ruta, `stopAt` y `maxIssues`.
+   issues disponibles. La ruta de cada issue la decide gentle-ai: no se
+   pregunta. Muestra el plan en una línea antes de arrancar: repositorio,
+   alcance, `stopAt`, `maxIssues`, modo de RDD, y si `reviewConsent` y
+   `sizeException` están activas. Después, antes de reclamar la primera issue,
+   corre **una vez por sesión** el preflight de SDD de gentle-ai, con las
+   respuestas recomendadas por la config (ver *Preflight de SDD por
+   adelantado* en [references/execution.md](references/execution.md)); si ya
+   quedó establecido en esta sesión, no lo repitas.
 
 ## Paso 3: base sana
 
@@ -298,21 +307,7 @@ En modo **una issue**, la issue ya está elegida (Paso 2): `confirmEachIssue` y
    "Tomando esta issue para trabajar en ella ahora"
    (`gh issue comment <n> -R <owner/repo> --body ...`). No agregues labels de
    estado (ver *Estados en GitHub*).
-2. **Decisión de flujo.** Lee la issue completa y el código que toca, y
-   recomienda SDD completo o flujo directo con la skill `workflow-decision` de
-   este plugin ([../workflow-decision/SKILL.md](../workflow-decision/SKILL.md)).
-   Según la ruta de la corrida (Paso 2; en una issue, `defaultRoute`):
-   - `"ask"` (por defecto en una issue): pregunta con `AskUserQuestion`, con la
-     recomendada primero.
-   - `"auto"`: usa la recomendada **sin preguntar**. Deja el bloque de la
-     recomendación como comentario en la issue
-     (`gh issue comment <n> -R <owner/repo> --body ...`) y di la ruta en una
-     línea al usuario. La única excepción es una ambigüedad de negocio que
-     impide decidir (la issue en realidad necesita spec): no la implementes,
-     comenta qué falta, sáltala y sigue con la siguiente; al final repórtala.
-   - `"direct"` o `"sdd"`: usa esa ruta salvo que la recomendación sea la otra
-     con señales fuertes: en ese caso pregunta igual.
-3. **Rama.** Desde la rama base actualizada (Paso 1.4), créala enlazada a la
+2. **Rama.** Desde la rama base actualizada (Paso 1.4), créala enlazada a la
    issue:
    `gh issue develop <n> -R <owner/repo> --base <base> --name <rama> --checkout`
    (en el checkout). El nombre sale de `branchPattern` (por defecto
@@ -329,41 +324,47 @@ En modo **una issue**, la issue ya está elegida (Paso 2): `confirmEachIssue` y
 
    Si la issue ya tiene una rama enlazada tuya, es trabajo para retomar (Paso
    1b): no crees otra.
-4. **Implementación**, según la ruta elegida. En las dos, la sesión principal
-   orquesta y el trabajo pesado lo hacen sub-agentes, para no llenar el
-   contexto: ver [references/execution.md](references/execution.md).
-   - **SDD completo:** el SDD de **gentle-ai** (sus skills y agentes `sdd-*` y
-     su dispatcher), de `sdd-new` a `verify`, automático salvo ambigüedad real
-     de negocio. Su preflight de sesión se completa con `sdd` de la config del
-     repo, sin preguntar en cada issue.
-   - **Directo:** el plan en 3 a 6 líneas va en un comentario de la issue; un
-     sub-agente implementa con TDD y verifica, y devuelve un reporte corto.
-     Cada sub-agente usa el modelo de su etapa: opus para planear y revisar,
-     sonnet para implementar y corregir (`models` en las preferencias).
-   - En ambos casos sigue las convenciones del repositorio (`CLAUDE.md`,
-     `AGENTS.md`): TDD, cobertura y estilo. Si Engram está disponible, guarda
-     las decisiones y los descubrimientos a medida que aparecen.
-5. **Verificación local.** Que el sub-agente corra todas las entradas de
+3. **Implementación con gentle-ai.** Entrégale la issue al orquestador de
+   gentle-ai (título, descripción, criterios de aceptación, comandos de
+   `verify`, modo TDD del repo y estrategia de entrega: `exception-ok` en
+   automático con `"sizeException": "accept"`, si no `single-pr`), que la
+   trabaja con ODD:
+   decide si es chica o sustancial, y si propone SDD, **se acepta sin
+   preguntar** y corre la cadena `/gentle-sdd-*` hasta `verify`. No decidas la
+   ruta ni la corrijas. Comenta en la issue qué ruta tomó gentle-ai y por qué,
+   en dos o tres líneas. Qué se le pasa, el preflight de SDD y lo que nunca
+   hace esta skill: [references/execution.md](references/execution.md).
+4. **Verificación local.** Que gentle-ai haya corrido todas las entradas de
    `verify` cuyos `paths` toque el cambio, y reporte solo el resultado. Si no
    hay config, usa lo que declare `CLAUDE.md`; si tampoco, pregunta una vez y
    ofrece guardarlo en la config del repo. Una prueba que no pudo correr por el
    entorno (por ejemplo, una imagen de contenedor que no arranca en esta
    máquina) no cuenta como pasada: dilo en el PR.
-6. **Revisión de código.** Si existe `/code-review`, úsalo (corre aparte). Las
-   correcciones las hace un sub-agente, no la sesión principal. Resuelve solo los
-   hallazgos de esta issue; el resto va a una issue nueva (ver *Issues que salen
-   de una issue*). Si aparece un prompt de consentimiento de revisión,
-   preséntalo tal cual al usuario.
-7. **PR.** Ábrelo **directamente contra la rama base**; no lo retargetees
+5. **Revisión de código.** Con RDD encendido, revisa gentle-ai sobre los
+   commits de unidad de trabajo: no corras además `/code-review`, y enruta RDD
+   solo por las transiciones que devuelve
+   `gentle-ai review status ... --next-transition`. Con RDD apagado, usa
+   `/code-review` si existe, y las correcciones se las pides a gentle-ai.
+   Resuelve solo los hallazgos de esta issue; el resto va a una issue nueva
+   (ver *Issues que salen de una issue*). Un sobre de consentimiento de
+   revisión se presenta tal cual al usuario, salvo en automático con
+   `"reviewConsent": "granted"`: ver *Consentimiento de revisión* en
+   [references/execution.md](references/execution.md).
+6. **PR.** Ábrelo **directamente contra la rama base**; no lo retargetees
    después: `gh pr create -R <owner/repo> --base <base> --head <rama>`. Uno solo
    por issue, en el idioma de `language.pullRequests`, con `Fixes #<n>` en la
    **descripción** (GitHub no lee las palabras clave de los comentarios). La
-   descripción dice qué ruta se usó y por qué, y qué se verificó localmente y
-   qué no. Si la rama base no es la rama por defecto, agrega que la issue se
-   cierra a mano después del merge.
-8. **CI y merge.** Espera los `requiredChecks` (o todos los checks, si no hay
-   config). Si fallan por tu cambio, corrígelo; si fallan por causa ajena,
-   detente y avisa.
+   descripción dice qué ruta tomó gentle-ai y por qué (con el documento
+   `odd/tasks/<feature>.md` o el cambio SDD, si los hay), cómo se revisó
+   (RDD, con el consentimiento si lo hubo, o `/code-review`), qué se verificó
+   localmente y qué no, y si el trabajo superó el presupuesto de un PR (con
+   `size:exception`: el label en el PR, el tamaño y el porqué, ver *Tamaño del
+   PR* en [references/execution.md](references/execution.md)). Si la
+   rama base no es la rama por defecto, agrega que la issue se cierra a mano
+   después del merge.
+7. **CI y merge.** Espera los `requiredChecks` (o todos los checks, si no hay
+   config). Si fallan por tu cambio, pídele la corrección a gentle-ai en la
+   misma rama; si fallan por causa ajena, detente y avisa.
    - **Que los checks existan:** un PR sin checks no es verde; averigua por qué
      antes de seguir, nunca lo apruebes ni lo mergees así
      (ver [references/github-lifecycle.md](references/github-lifecycle.md)).
@@ -377,14 +378,15 @@ En modo **una issue**, la issue ya está elegida (Paso 2): `confirmEachIssue` y
      que use el repo). Nunca mergees en rojo. Después, *Cierre de la issue*.
    - Una issue con `labels.security` nunca se mergea sin revisión humana, sea
      cual sea `stopAt`.
-9. **Cierre.** Con flujo directo no hay nada que archivar. Con SDD, el cambio se
+8. **Cierre.** Con la ruta directa no hay nada que archivar (el documento de ODD
+   queda en la rama, como cualquier otro archivo). Con SDD, el cambio se
    archiva **después del merge**, nunca antes. Dónde va el commit (push directo o
    PR de archivo, según la protección de la rama base) y qué pasa con
    `stopAt: "pr"`: ver [references/archive.md](references/archive.md).
-10. En modo **una issue**, termina y reporta. En modo **automático**, cierra la
-    issue con un párrafo corto y vuelve a *Selección* sin arrastrar sus
-    detalles (ver *Entre issues* en
-    [references/execution.md](references/execution.md)).
+9. En modo **una issue**, termina y reporta. En modo **automático**, cierra la
+   issue con un párrafo corto y vuelve a *Selección* sin arrastrar sus
+   detalles (ver *Entre issues* en
+   [references/execution.md](references/execution.md)).
 
 ## Cierre de la issue
 

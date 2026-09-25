@@ -1,5 +1,5 @@
 ---
-description: Recomienda SDD completo o flujo directo para una issue, con la skill workflow-decision
+description: Recomienda SDD completo o flujo directo para una issue, con la skill asesora workflow-decision (github-goal no la usa)
 ---
 
 Carga la skill `workflow-decision` con la herramienta `skill` y síguela para

@@ -11,8 +11,8 @@
     {
       "name": "drawl99",
       "source": "./plugins/drawl99",
-      "description": "Trabajar las issues de GitHub de un repositorio en orden de milestones y dependencias, con la decisión de flujo (SDD completo o directo) por issue.",
-      "version": "1.2.0",
+      "description": "Trabajar las issues de GitHub de un repositorio en orden de milestones y dependencias; la ruta y la implementación de cada issue las delega a gentle-ai.",
+      "version": "2.0.0",
       "author": {
         "name": "drawl99"
       },

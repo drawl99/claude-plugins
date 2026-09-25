@@ -8,21 +8,21 @@ necesitaba.
 | Qué se necesita | Claude Code | OpenCode | Pi |
 |---|---|---|---|
 | Invocar `github-goal` | `/drawl99:github-goal [#123 \| owner/repo#123]` | `/github-goal [#123 \| owner/repo#123]` | `/skill:github-goal [#123 \| owner/repo#123]` |
-| Invocar `workflow-decision` | `/drawl99:workflow-decision` o pedirlo | `/workflow-decision` o pedirlo | `/skill:workflow-decision` o pedirlo |
-| Preguntar al usuario con opciones (elegir repo, alcance, modo, ruta…) | `AskUserQuestion` | `question` | `ask_user_question` (paquete `@juicesharp/rpiv-ask-user-question`). Sin él, pregunta en texto plano con las opciones numeradas y **detente** hasta la respuesta. |
-| Sub-agente | `Agent` (tipo `general-purpose`) | `task` (sub-agente `general` o el que el usuario tenga configurado) | `subagent_run` y `subagent_result` (paquete `pi-subagents`). Sin él, ver *Sin sub-agentes*, abajo. |
-| Modelo del sub-agente (ruta directa) | parámetro `model` de `Agent` (`opus`, `sonnet`, `haiku`) | si `task` no acepta modelo por llamada, el del sub-agente configurado en `opencode.json` (⚠️ en el chequeo) | si `subagent_run` no acepta modelo por llamada, el configurado en `pi-subagents` (⚠️ en el chequeo) |
-| Revisión de código | `/code-review` | un sub-agente de revisión de solo lectura | un sub-agente de revisión de solo lectura |
+| Invocar `workflow-decision` (skill aparte, asesora; `github-goal` no la usa) | `/drawl99:workflow-decision` o pedirlo | `/workflow-decision` o pedirlo | `/skill:workflow-decision` o pedirlo |
+| Preguntar al usuario con opciones (elegir repo, alcance, modo…) | `AskUserQuestion` | `question` | `ask_user_question` (propia del paquete `gentle-pi` desde gentle-ai 3.6.1; `gentle-ai sync` quita `@juicesharp/rpiv-ask-user-question`, que choca con ella). Para un sobre cerrado de una sola opción, como el consentimiento de revisión, `ask_user_choice`, también de `gentle-pi`. Sin ellas, pregunta en texto plano con las opciones numeradas y **detente** hasta la respuesta. |
+| Sub-agente (los usa gentle-ai) | `Agent` | `task` (sub-agente `general` o el que el usuario tenga configurado) | herramientas `subagent_*` del paquete `gentle-pi` (reemplazan a `pi-subagents`). Sin ellas, ver *Sin sub-agentes*, abajo. |
+| Revisión de código | con RDD encendido, la nativa de gentle-ai; si no, `/code-review` | con RDD encendido, la nativa de gentle-ai; si no, un sub-agente de revisión de solo lectura | con RDD encendido, la nativa de gentle-ai (`gentle_review`); si no, un sub-agente de revisión de solo lectura |
 | GitHub | `gh` CLI | `gh` CLI | `gh` CLI |
-| SDD de gentle-ai | skills y agentes `sdd-*`; flujo en `~/.claude/skills/_shared/sdd-orchestrator-workflow.md` | comandos `/sdd-*` y agente `gentle-orchestrator`; skills en `~/.config/opencode/skills/sdd-*` | paquete `gentle-pi` (skills `gentle-ai-*` y sus prompts) |
+| Orquestador de gentle-ai (ODD) | instrucciones de gentle-ai en `~/.claude/CLAUDE.md` | agente `gentle-orchestrator` | paquete `gentle-pi` |
+| SDD de gentle-ai | comandos `/gentle-sdd-*` (desde 3.7.0; antes `/sdd-*`) y agentes `sdd-*`; flujo en `~/.claude/skills/_shared/sdd-orchestrator-workflow.md` | comandos `/sdd-*` y agente `gentle-orchestrator`; skills en `~/.config/opencode/skills/sdd-*` | paquete `gentle-pi`: comandos `/gentle-sdd-*` y su flujo SDD |
 | Memoria (opcional) | Engram (`mem_*`) | Engram si está configurado | `gentle-engram` |
 
 ## Sin sub-agentes
 
-Si el host no tiene una herramienta de sub-agentes, la ruta directa se hace en
-la sesión principal, con más disciplina de contexto: lee solo lo que el cambio
-necesita, corre las pruebas filtrando la salida al resumen (conteos y fallas, no
-el log completo) y no pegues diffs enteros. Dilo en el chequeo de requisitos
+Si el host no tiene una herramienta de sub-agentes, gentle-ai trabaja la issue
+en la sesión principal, con más disciplina de contexto: lee solo lo que el
+cambio necesita, corre las pruebas filtrando la salida al resumen (conteos y
+fallas, no el log completo) y no pegues diffs enteros. Dilo en el chequeo de requisitos
 (⚠️) para que el usuario sepa que la sesión se va a llenar más rápido.
 
 ## Invocación explícita

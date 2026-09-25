@@ -1,9 +1,13 @@
 ---
 name: workflow-decision
-description: Recomienda si una issue o tarea de desarrollo se trabaja con SDD completo (propuesta, specs, diseño y tareas antes del código) o con flujo directo, explicando por qué con señales de la issue. Úsala cuando alguien pregunte si una issue necesita SDD, planificación formal o diseño previo, o antes de empezar a implementar una issue.
+description: Recomienda si una issue o tarea de desarrollo se trabaja con SDD completo (propuesta, specs, diseño y tareas antes del código) o con flujo directo, explicando por qué con señales de la issue. Es una skill asesora independiente: úsala cuando alguien pregunte si una issue necesita SDD, planificación formal o diseño previo. No la usa github-goal, donde la ruta la decide gentle-ai.
 ---
 
 # workflow-decision: SDD completo o directo
+
+Skill asesora e independiente: da una recomendación cuando se la piden.
+`github-goal` no la usa; allí la ruta de cada issue la decide gentle-ai con su
+propio protocolo, y esta skill no la reemplaza ni la corrige.
 
 Se decide por issue, después de leer la issue completa (descripción, criterios
 de aceptación, comentarios, issues relacionadas) y, si estás en el repositorio,
@@ -67,17 +71,6 @@ Por qué: <2 o 3 señales, citando la issue o el código>
 Qué implica: <artefactos que se escriben (SDD) o plan breve (directo)>
 ```
 
-Después, según quién te invocó:
-
-- **Pedida directamente** ("¿esta issue va con SDD?"): la respuesta es el bloque.
-  No preguntes cuál ruta prefiere: te pidieron una recomendación, dala. Puedes
-  cerrar con una línea sobre lo que cambiaría la recomendación, si aplica.
-- **Desde `github-goal` con ruta `auto`:** no preguntes. El bloque va como
-  comentario en la issue y la ruta recomendada es la que se usa; déjala con su
-  motivo en la descripción del PR.
-- **Desde `github-goal`** (antes de implementar una issue, ruta `ask`): después del bloque,
-  una sola pregunta con la herramienta de preguntas del host (`AskUserQuestion`
-  en Claude Code, `question` en OpenCode, `ask_user_question` en Pi), con la opción recomendada primero y
-  "(Recomendado)" al final de su etiqueta, y la otra ruta con su costo en una
-  línea. Respeta la respuesta aunque contradiga la recomendación, y deja la ruta
-  elegida y el motivo en la descripción del PR.
+La respuesta es el bloque. No preguntes cuál ruta prefiere: te pidieron una
+recomendación, dala. Puedes cerrar con una línea sobre lo que cambiaría la
+recomendación, si aplica.

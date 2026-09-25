@@ -17,7 +17,9 @@ del merge**, nunca antes: registra un cambio ya integrado.
     con `"pr"` queda abierto.
 - **Con `stopAt: "pr"`** el merge no ocurre en la corrida, así que el
   archivo queda pendiente: dilo en el reporte final, con el nombre del cambio.
-  Lo recoge la próxima corrida (ver *Archivos pendientes*, abajo) o `/sdd-archive`.
+  Lo recoge la próxima corrida (ver *Archivos pendientes*, abajo) o el comando
+  de archivo de gentle-ai (`/gentle-sdd-archive` en Claude Code y Pi,
+  `/sdd-archive` en OpenCode; ver [hosts.md](hosts.md)).
 
 ## Archivos pendientes
 
