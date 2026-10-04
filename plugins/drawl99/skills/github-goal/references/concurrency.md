@@ -75,9 +75,11 @@ ganó. Reemplaza el paso *Reclamo* del *Flujo por issue*:
    `gh issue develop` falla porque existe), no es tuya de este reclamo:
    también perdiste.
 
-Adoptar un reclamo vencido (ver [resume.md](resume.md)) sigue los mismos pasos
-3 y 4: si mientras tanto el dueño refrescó su latido u otra sesión adoptó
-antes, perdiste.
+Adoptar un reclamo vencido (ver [resume.md](resume.md)) sigue el paso 3: si
+mientras tanto el dueño refrescó su latido u otra sesión adoptó antes,
+perdiste. El paso 4 no aplica al adoptar: la rama que ya existe es el trabajo
+que vienes a retomar. Úsala si es la rama enlazada de la issue y el reclamo
+vencido es de tu login; si no, no la adoptes y avisa.
 
 ## Worktree por issue
 
