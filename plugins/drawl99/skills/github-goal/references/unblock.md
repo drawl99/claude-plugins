@@ -18,7 +18,8 @@ Una issue ajena es candidata solo si cumple **todo**:
 - Nadie la empezó: sin rama enlazada (`gh issue develop --list <n> -R <owner/repo>`),
   sin PR abierto que la referencie
   (`gh pr list -R <owner/repo> --search "#<n>" --state open`), sin comentario de
-  reclamo.
+  reclamo ni reclamo activo de ninguna sesión (ver *Marca de reclamo* en
+  [concurrency.md](concurrency.md)).
 - Cumple el resto de *Selección* (en `SKILL.md`): sus propios bloqueantes
   cerrados, el label de lista (si el repo lo tiene), sin `needs-spec` ni
   `blocking`, sin sub-issues abiertas.
@@ -45,8 +46,12 @@ Si el usuario acepta:
 3. **Comenta en la issue** mencionando a quien la tenía asignada, para que
    GitHub le avise: "@<persona> tomo esta issue porque bloquea #<X>, que es
    mía, y todavía no estaba empezada. Si ya la estabas por arrancar, avísame y
-   la suelto." Sin asignado previo, el mismo comentario sin mención.
-4. Sigue el *Flujo por issue* normal de `SKILL.md`. El PR dice en la descripción que se
+   la suelto." Sin asignado previo, el mismo comentario sin mención. Ese
+   comentario es tu reclamo: lleva la marca oculta de la sesión y se verifica
+   igual que en *Reclamar con verificación* ([concurrency.md](concurrency.md)).
+   Si perdiste, libera el reclamo, devuélvele la asignación a quien la tenía y
+   dilo.
+4. Sigue el *Flujo por issue* normal de `SKILL.md`, desde *Rama y worktree*. El PR dice en la descripción que se
    tomó para desbloquear y cuál issue destraba.
 
 En modo **una issue**, las candidatas de desbloqueo aparecen en la lista solo

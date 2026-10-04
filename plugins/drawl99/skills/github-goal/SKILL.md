@@ -32,6 +32,13 @@ Se adapta a cada repositorio y a cada persona con dos archivos opcionales:
 Su formato, sus valores por defecto y la precedencia están en
 [references/config.md](references/config.md). Léelo antes del Paso 1.
 
+**Varias sesiones.** Otras sesiones (tuyas o de colaboradores) pueden estar
+trabajando el mismo repo. Al arrancar, genera un **id de sesión**; cada issue
+se reclama con una marca que lo lleva y se verifica después de reclamarla, se
+trabaja en su propio **worktree** (el clon compartido nunca se mueve), y cada
+sesión tiene **una sola issue en curso** hasta que su PR se mergea. Detalle en
+[references/concurrency.md](references/concurrency.md).
+
 ## Argumentos
 
 - Sin argumento: se pregunta el repositorio, el alcance y el modo.
@@ -108,7 +115,7 @@ que en el Paso 0:
 | `gh` ve el repositorio | con la cuenta resuelta en el 1.1: `gh repo view <owner/repo> --json nameWithOwner,defaultBranchRef,hasIssuesEnabled` | si falla, prueba las otras cuentas de `gh auth status`. Si una lo ve, úsala y sugiere guardarla en `githubAccounts` (⚠️). Si ninguna lo ve, ❌ detente y sugiere `gh auth login` |
 | Issues habilitadas | `hasIssuesEnabled` es `true` | ❌ detente |
 | Checkout | el `origin` del checkout apunta al repo elegido | ❌ detente |
-| Árbol limpio | `git -C <ruta> status --porcelain` vacío | si hay cambios y la rama actual es la de una issue tuya reclamada (enlazada con `gh issue develop --list <n>` o con el nombre de `branchPattern`), es trabajo para retomar (⚠️, ver Paso 1b). Si no, ❌ detente: no mezcles trabajo ajeno con una issue |
+| Clon principal | `git -C <ruta> status --porcelain` y la rama actual | solo se usa para `fetch` y worktrees, así que sus cambios no se tocan ni frenan la corrida (⚠️ si los hay). Si la rama actual es la de una issue tuya reclamada (enlazada con `gh issue develop --list <n>` o con el nombre de `branchPattern`), es trabajo para retomar (ver Paso 1b) |
 | Config del repo | `.claude/github-goal.json` existe en el checkout y es JSON válido | ⚠️ se usan los valores por defecto y se pregunta lo que falte; si existe pero es inválido, ❌ detente y muestra el error. Si tiene `sdd.deliveryStrategy` o `sdd.reviewBudgetLines`, ⚠️ se ignoran desde 2.0.0 |
 | Label de lista | existe un label con el nombre exacto de `labels.ready` (`gh label list -R <owner/repo> --search <nombre> --json name`, comparando el nombre exacto) | ⚠️ el requisito del label de lista queda apagado para este repo: dilo y ofrece crearlo (`gh label create`), nunca sin permiso |
 | Comandos de verificación | los de `verify` en la config, o los que declare `CLAUDE.md`/`AGENTS.md` | ⚠️ se preguntarán al tomar la primera issue |
@@ -151,10 +158,11 @@ Si no:
    defecto del repositorio (`defaultBranchRef` del 1.2).
 2. Si la rama base no es la rama por defecto, recuérdalo al usuario: los PRs
    contra ella no cierran la issue solos (ver *Cierre de la issue*).
-3. Toda rama nueva sale de la rama base actualizada. Primero
-   `git -C <ruta> checkout <base> -q && git -C <ruta> pull --ff-only -q`, y
-   después se crea con `gh issue develop` (ver *Flujo por issue*). Nunca desde
-   donde quedaste parado. Todo PR va contra la rama base.
+3. Toda rama nueva sale de la rama base actualizada en el remoto: primero
+   `git -C <ruta> fetch origin <base> -q`, después `gh issue develop` crea la
+   rama remota desde la base y se trabaja en un worktree propio (ver *Flujo
+   por issue*). Nunca desde donde quedaste parado, y nunca muevas el clon
+   principal. Todo PR va contra la rama base.
 
 ## Paso 1b: retomar trabajo pendiente
 
@@ -163,8 +171,13 @@ repositorio elegido: issues tuyas reclamadas y abiertas (con su rama, sus
 cambios sin commitear o en un stash, su PR y sus checks), PRs ya mergeados en
 una rama base que no es la por defecto cuya issue sigue abierta, y archivos SDD
 pendientes. Si encuentras algo, ofrece retomarlo en una sola pregunta; en modo
-automático, retomar va primero. Qué buscar, desde dónde sigue cada estado y lo
-que nunca se hace al retomar: [references/resume.md](references/resume.md).
+automático, retomar va primero. Solo se retoma lo de esta sesión o lo que tiene
+el reclamo vencido; lo que otra sesión tiene activo se lista como "en curso en
+otra sesión" y se saltea. Si tienes issues sin entregar con el reclamo vencido,
+adopta una antes de tomar cualquier issue nueva (WIP = 1, ver
+[references/concurrency.md](references/concurrency.md)). Qué buscar, desde
+dónde sigue cada estado y lo que nunca se hace al retomar:
+[references/resume.md](references/resume.md).
 
 ## Paso 2: modo
 
@@ -198,8 +211,9 @@ Cómo se decide:
    como alcance, la corrida trabaja solo ese y termina cuando no le quedan
    issues disponibles. La ruta de cada issue la decide gentle-ai: no se
    pregunta. Muestra el plan en una línea antes de arrancar: repositorio,
-   alcance, `stopAt`, `maxIssues`, modo de RDD, y si `reviewConsent` y
-   `sizeException` están activas. Después, antes de reclamar la primera issue,
+   alcance, id de sesión, `stopAt` (con `"pr"`, que espera el merge de cada
+   PR antes de la siguiente, con `mergeWait`), `maxIssues`, modo de RDD, y si
+   `reviewConsent` y `sizeException` están activas. Después, antes de reclamar la primera issue,
    corre **una vez por sesión** el preflight de SDD de gentle-ai, con las
    respuestas recomendadas por la config (ver *Preflight de SDD por
    adelantado* en [references/execution.md](references/execution.md)); si ya
@@ -258,12 +272,15 @@ cumple todo:
   defecto), asignada a ti (`@me`) o sin asignar; con `"me"`, solo asignada a
   ti. Asignada a otra persona, salvo la excepción de *Desbloqueo*, abajo.
 - No tiene `labels.needsSpec` ni `labels.blocking`.
-- Nadie la empezó: sin comentario de reclamo de otra persona, sin rama enlazada
+- Nadie la empezó: sin comentario de reclamo de otra persona ni reclamo activo
+  de otra sesión (también de tu login, ver
+  [references/concurrency.md](references/concurrency.md)), sin rama enlazada
   de otra persona (`gh issue develop --list <n> -R <owner/repo>`), sin PR
   abierto que la referencie (`gh pr list -R <owner/repo> --search "#<n>" --state open`).
-  Si el reclamo, la rama o el PR son tuyos, es trabajo para retomar (Paso 1b).
-  Compruébalo como mínimo para la issue que vas a tomar, justo antes del
-  reclamo.
+  Si el reclamo, la rama o el PR son tuyos y el reclamo está vencido, es
+  trabajo para retomar (Paso 1b). Compruébalo como mínimo para la issue que
+  vas a tomar, justo antes del reclamo.
+- Esta sesión no tiene otra issue sin entregar (WIP = 1).
 
 No las tomes, y avisa en su lugar:
 
@@ -302,16 +319,22 @@ En modo **una issue**, la issue ya está elegida (Paso 2): `confirmEachIssue` y
 
 ## Flujo por issue
 
-1. **Reclamo.** Si la issue está sin asignar, asígnatela:
-   `gh issue edit <n> -R <owner/repo> --add-assignee @me`. Comenta en la issue:
-   "Tomando esta issue para trabajar en ella ahora"
-   (`gh issue comment <n> -R <owner/repo> --body ...`). No agregues labels de
-   estado (ver *Estados en GitHub*).
-2. **Rama.** Desde la rama base actualizada (Paso 1.4), créala enlazada a la
-   issue:
-   `gh issue develop <n> -R <owner/repo> --base <base> --name <rama> --checkout`
-   (en el checkout). El nombre sale de `branchPattern` (por defecto
-   `{type}/{number}-{slug}`):
+1. **Reclamo con verificación.** Chequeo previo, asignación si está sin
+   asignar (`gh issue edit <n> -R <owner/repo> --add-assignee @me`), comentario
+   "Tomando esta issue para trabajar en ella ahora." con la marca oculta de la
+   sesión, y relectura: si otra sesión reclamó antes o asignaron a otra
+   persona, perdiste: libera tu reclamo y vuelve a *Selección* con la
+   siguiente (en modo una issue, repórtalo y termina). Desde acá, refresca el
+   latido del reclamo en cada cambio de fase. Pasos exactos en *Reclamar con
+   verificación* de [references/concurrency.md](references/concurrency.md).
+   No agregues labels de estado (ver *Estados en GitHub*).
+2. **Rama y worktree.** Desde la rama base actualizada (Paso 1.4), crea la
+   rama enlazada a la issue sin moverte de rama
+   (`gh issue develop <n> -R <owner/repo> --base <base> --name <rama>`) y su
+   worktree; todo lo que sigue corre en él (ver *Worktree por issue* en
+   [references/concurrency.md](references/concurrency.md)). Si la rama ya
+   existe en el remoto y no es de este reclamo, perdiste la carrera. El
+   nombre sale de `branchPattern` (por defecto `{type}/{number}-{slug}`):
    - `{type}`: `fix`, `feat`, `chore` o `docs`. Manda un prefijo convencional
      en el título (`fix:`, `feat(api):`); si no hay, los labels (`bug` → `fix`,
      `enhancement` o `feature` → `feat`, `documentation` → `docs`); si tampoco,
@@ -368,25 +391,30 @@ En modo **una issue**, la issue ya está elegida (Paso 2): `confirmEachIssue` y
    - **Que los checks existan:** un PR sin checks no es verde; averigua por qué
      antes de seguir, nunca lo apruebes ni lo mergees así
      (ver [references/github-lifecycle.md](references/github-lifecycle.md)).
-   - `stopAt: "pr"` (por defecto): con CI en verde, la issue termina acá. Si la
-     rama base no es la rama por defecto, dilo en el reporte: la issue va a
-     quedar abierta después del merge y hay que cerrarla (la próxima corrida lo
-     ofrece, ver [references/resume.md](references/resume.md)). En modo
-     automático, pasa a la siguiente solo si sus bloqueantes no dependen de
-     este PR.
+   - `stopAt: "pr"` (por defecto): en modo **una issue**, con CI en verde la
+     issue termina acá. Si la rama base no es la rama por defecto, dilo en el
+     reporte: la issue va a quedar abierta después del merge y hay que
+     cerrarla (la próxima corrida lo ofrece, ver
+     [references/resume.md](references/resume.md)). En modo **automático**,
+     con CI en verde pasa a **Esperando merge**: espera el merge humano
+     (atendiendo revisiones, CI en rojo y conflictos) y no toma otra issue
+     hasta que se mergee o venza `mergeWait.timeoutMinutes` (ver *Esperando
+     merge* en [references/concurrency.md](references/concurrency.md)).
    - `stopAt: "merge"`: con CI en verde, mergea (`gh pr merge`, con el método
      que use el repo). Nunca mergees en rojo. Después, *Cierre de la issue*.
    - Una issue con `labels.security` nunca se mergea sin revisión humana, sea
-     cual sea `stopAt`.
+     cual sea `stopAt`: en automático, pasa a *Esperando merge*.
 8. **Cierre.** Con la ruta directa no hay nada que archivar (el documento de ODD
    queda en la rama, como cualquier otro archivo). Con SDD, el cambio se
    archiva **después del merge**, nunca antes. Dónde va el commit (push directo o
    PR de archivo, según la protección de la rama base) y qué pasa con
    `stopAt: "pr"`: ver [references/archive.md](references/archive.md).
-9. En modo **una issue**, termina y reporta. En modo **automático**, cierra la
+9. En modo **una issue**, termina y reporta. En modo **automático**, con el PR
+   mergeado, libera el reclamo, quita el worktree si está limpio, cierra la
    issue con un párrafo corto y vuelve a *Selección* sin arrastrar sus
    detalles (ver *Entre issues* en
-   [references/execution.md](references/execution.md)).
+   [references/execution.md](references/execution.md)). Al terminar la
+   corrida con una issue sin entregar, libera su reclamo con el motivo.
 
 ## Cierre de la issue
 
