@@ -46,6 +46,9 @@ que espera a que una persona lo mergee.
   cambios no se tocan.
 - Con `stopAt: "pr"` en automático ya no se pasa a la siguiente issue con el
   PR en verde. En modo una issue, igual que antes, termina con el PR en verde.
+- La regla de atribución ahora es explícita y sin excepciones: ni trailers
+  `Co-Authored-By` de Claude o de un agente ni "Generated with Claude Code" en
+  commits, PRs, comentarios ni specs, aunque el host los agregue por defecto.
 
 ## [2.0.0] — 2026-09-25
 

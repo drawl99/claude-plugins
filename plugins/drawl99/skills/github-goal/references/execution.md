@@ -54,8 +54,11 @@ El pedido lleva, en un solo bloque:
   configuración de gentle-ai), con su fuente y su runner. Si el repo no lo
   declara, no lo inventes: dilo y deja que gentle-ai resuelva la ambigüedad.
 - **Commits:** convencionales, con el número de la issue, en el idioma de
-  `language.commits` y sin mencionar a Claude ni a la IA (ver *Restricciones*
-  en `SKILL.md`).
+  `language.commits` y sin ninguna atribución a Claude ni a la IA: ni
+  trailers `Co-Authored-By` de Claude o de un agente, ni "Generated with
+  Claude Code" (ver *Restricciones* en `SKILL.md`). Revisa los commits de
+  gentle-ai antes de abrir el PR; si alguno trae esa atribución, pídele que
+  reescriba el mensaje antes del push.
 - **Estrategia de entrega:** `github-goal` abre exactamente un PR por issue,
   con `Fixes #<n>`, así que ODD (o SDD) no lo parte en PRs encadenados. La
   estrategia que se le indica depende de `sizeException` (ver *Tamaño del PR*,
