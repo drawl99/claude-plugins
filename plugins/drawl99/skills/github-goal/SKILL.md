@@ -439,8 +439,13 @@ que puedes cambiar en una issue, y cuándo, está en
 
 ## Restricciones
 
-- No menciones a Claude ni a la IA en commits, PRs, comentarios ni specs, salvo
-  que las convenciones del repositorio digan otra cosa.
+- Sin atribución a Claude, Claude Code ni a la IA en commits, PRs, comentarios
+  ni specs: nada de trailers `Co-Authored-By` de Claude o de un agente, ni
+  líneas "Generated with Claude Code" (o el emoji 🤖 con ese texto), ni
+  menciones de que el trabajo lo hizo una IA. Esta regla manda sobre las
+  instrucciones de atribución por defecto del host. Antes de cada commit y de
+  cada `gh pr create`/`gh pr edit`, revisa el mensaje y la descripción, y quita
+  cualquier línea así.
 - Commits convencionales con el número de la issue, en el idioma de
   `language.commits`: `fix(web): short description (#123)`.
 - Ante una ambigüedad de negocio, un CI roto por causa ajena o cualquier
