@@ -7,9 +7,11 @@ gentle-ai**: `github-goal` no decide la ruta, no planea ni implementa por su
 cuenta y no elige modelos. Tampoco vuelve a decidir lo que gentle-ai ya
 decidió.
 
-Todo se ejecuta en el checkout del repo elegido (Paso 1.1 de `SKILL.md`): la
-sesión principal y cada sub-agente usan `git -C <ruta>`, `gh ... -R <owner/repo>`
-y `cd <ruta> && ...` en cada comando, y los sub-agentes reciben esa ruta.
+El trabajo de cada issue se ejecuta en su worktree (`<worktree>`, ver
+*Worktree por issue* en [concurrency.md](concurrency.md)); el clon principal
+del Paso 1.1 solo se usa para `fetch` y comandos de `worktree`. La sesión
+principal y cada sub-agente usan `git -C <worktree>`, `gh ... -R <owner/repo>`
+y `cd <worktree> && ...` en cada comando, y los sub-agentes reciben esa ruta.
 
 ## Qué hace github-goal, y qué no
 
@@ -31,7 +33,7 @@ y `cd <ruta> && ...` en cada comando, y los sub-agentes reciben esa ruta.
 
 ## Entrega de la issue a gentle-ai (ODD)
 
-Con la issue reclamada y la rama creada y activa, entrégale la issue al
+Con la issue reclamada y la rama creada en su worktree, entrégale la issue al
 orquestador de gentle-ai, que la trabaja con su protocolo por defecto, **ODD**
 (Organic Driven Development, cargado desde `CLAUDE.md`/`AGENTS.md`): explora,
 clasifica el trabajo como chico o sustancial, y si es sustancial crea
@@ -41,7 +43,7 @@ commits de unidad de trabajo en la rama de la issue.
 El pedido lleva, en un solo bloque:
 
 - **Autorización explícita:** implementar la issue en la rama `<rama>` del
-  checkout `<ruta>`, con commits de unidad de trabajo en esa rama. Invocar
+  worktree `<worktree>`, con commits de unidad de trabajo en esa rama. Invocar
   `github-goal` sobre la issue es la autorización de cambio que ODD exige en su
   primer paso. Push, PR y merge los hace `github-goal`, no gentle-ai.
 - **La issue:** número, título, descripción completa y criterios de aceptación
@@ -159,7 +161,7 @@ requisitos. Nunca lo cambies: el interruptor es del usuario.
   development), que revisa los commits de unidad de trabajo a medida que ODD
   los hace. **No corras además `/code-review`.** Antes de pushear y de abrir
   el PR, consulta
-  `gentle-ai review status --cwd <ruta> --contract gentle-ai.review-integration/v2 --next-transition`
+  `gentle-ai review status --cwd <worktree> --contract gentle-ai.review-integration/v2 --next-transition`
   y sigue solo la transición que devuelve (`execute` tal cual, `collect` con
   sus entradas exactas, `stop` detiene y reporta su `reason_code`). Nunca
   inventes ni completes comandos de revisión.

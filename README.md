@@ -63,8 +63,19 @@ Trabaja issues de GitHub de un repositorio en dos modos:
   las escritas en la descripción ("Depende de #12", "Blocked by #12") y ofrece
   enlazarlas. Con **sub-issues**, toma las sub-issues antes que el padre.
 - **Retoma lo interrumpido:** si una sesión se cortó a mitad de una issue, la
-  siguiente encuentra la rama, los cambios sin commitear o en un stash, el PR y
-  sus checks, y ofrece seguir desde ahí. Nunca borra ramas ni stashes.
+  siguiente encuentra la rama, su worktree, los cambios sin commitear o en un
+  stash, el PR y sus checks, y sigue desde ahí. Nunca borra ramas ni stashes.
+- **Varias sesiones a la vez:** tuyas o de colaboradores, sobre el mismo repo.
+  Cada corrida tiene un id de sesión, y el comentario de reclamo lleva una
+  marca oculta con ese id y un latido que la sesión refresca. Después de
+  reclamar verifica que nadie reclamó antes; si perdió la carrera, suelta la
+  issue y sigue con otra. Lo que otra sesión tiene activo no se toca; un
+  reclamo sin latido por más de `claims.ttlMinutes` vence y se puede adoptar.
+- **Un worktree por issue**, junto al clon (`<repo>-worktrees/<número>-<slug>`):
+  el clon compartido nunca se mueve de rama. El worktree se quita después del
+  merge si está limpio.
+- **Una issue en curso por sesión:** en automático no toma otra issue hasta
+  que el PR de la actual se mergea (ver `stopAt`).
 - Por cada issue, después de reclamarla y crear la rama, **se la entrega a
   gentle-ai**, que decide la ruta con su protocolo por defecto (ODD: directo,
   chico o sustancial con `odd/tasks/<feature>.md`) y la implementa con commits
@@ -98,7 +109,8 @@ Trabaja issues de GitHub de un repositorio en dos modos:
 - No da por bueno un PR sin checks: si el CI no arrancó (por ejemplo, por
   conflictos), lo detecta y lo resuelve antes de seguir.
 - Nunca inventa labels de estado: GitHub solo tiene abierta y cerrada, y "en
-  curso" se deduce del comentario de reclamo, la rama enlazada y el PR.
+  curso" se deduce del comentario de reclamo (con su marca de sesión, un
+  comentario HTML oculto), la rama enlazada y el PR.
 
 **Cómo cierra las issues:** GitHub solo cierra una issue con `Fixes #123`
 cuando el PR se mergea en la **rama por defecto** del repo. Si la rama base es
@@ -106,8 +118,9 @@ otra (una rama de integración), el PR lleva `Fixes #123` igual, pero la issue
 queda abierta después del merge: con `stopAt: "merge"`, la skill verifica que
 el PR se mergeó y la cierra con
 `gh issue close 123 --comment "Resuelta en #<PR>, mergeado en <base>."`; con
-`stopAt: "pr"` (por defecto) te lo avisa, y la próxima corrida detecta el PR
-mergeado con la issue abierta y ofrece cerrarla.
+`stopAt: "pr"` (por defecto) hace lo mismo en automático cuando ve el merge, y
+en modo una issue te lo avisa, y la próxima corrida detecta el PR mergeado con
+la issue abierta y ofrece cerrarla.
 
 **Cómo trabaja:** la sesión principal orquesta GitHub (issues, ramas, PRs, CI,
 merge, preguntas) y **gentle-ai** decide la ruta, implementa y, con RDD
@@ -120,8 +133,8 @@ organización con `githubAccounts` en tus preferencias; el comando nunca cambia
 tu cuenta activa. Engram es opcional.
 
 Antes de empezar verifica los requisitos (`gh`, cuentas, gentle-ai y el modo
-de RDD, herramientas del host, Engram) y, con el repo elegido, los del repo (issues habilitadas, árbol
-limpio, config, label de lista, herramientas de prueba), y muestra qué falta.
+de RDD, herramientas del host, Engram) y, con el repo elegido, los del repo (issues habilitadas, estado
+del clon, config, label de lista, herramientas de prueba), y muestra qué falta.
 
 #### Configuración
 
@@ -135,19 +148,24 @@ Dos archivos opcionales en JSON. El formato completo está en
   asignación (`assignee`: `me-or-unassigned` o `me`), nombres de los labels
   (`labels`), labels de prioridad y estimado, qué correr para verificar según
   los archivos tocados, qué checks de CI son obligatorios, en qué idioma van
-  commits y PRs, y el almacén de artefactos recomendado para el SDD. Si no existe, el comando ofrece crearlo
-  la primera vez.
+  commits y PRs, el almacén de artefactos recomendado para el SDD, y en
+  cuánto vence un reclamo sin latido (`claims.ttlMinutes`, por defecto 120).
+  Si no existe, el comando ofrece crearlo la primera vez.
 - **Por persona**, `~/.config/drawl99/github-goal.json` (o `~/.claude/github-goal.json`; no se versiona): el modo por
   defecto (`defaultMode`: `ask`, `single` o `goal`), hasta dónde llega (`stopAt`: `pr` o `merge`), cuántas issues por corrida (`maxIssues`),
   si confirma cada issue (`confirmEachIssue`), si ofrece tomar issues
   ajenas que te bloquean (`takeBlockingIssues`: `ask` o `never`), si acepta
   solo el consentimiento de revisión en automático (`reviewConsent`:
   `granted`), si acepta por adelantado `size:exception` en automático
-  (`sizeException`: `accept`), qué cuenta de
+  (`sizeException`: `accept`), cada cuánto consulta el PR y cuánto espera el
+  merge en automático (`mergeWait`: `pollMinutes`, `timeoutMinutes`), qué cuenta de
   `gh` usar por organización (`githubAccounts`) y dónde buscar clones locales
   (`workspaceDirs`).
 
-Por defecto se detiene al abrir el PR, no mergea. Para mergear solo:
+Por defecto no mergea: en modo una issue se detiene con el PR en verde, y en
+automático espera a que una persona lo mergee (atendiendo revisiones, CI en
+rojo y conflictos) antes de tomar la siguiente issue, hasta
+`mergeWait.timeoutMinutes` (por defecto 480). Para mergear solo:
 
 ```json
 { "stopAt": "merge" }

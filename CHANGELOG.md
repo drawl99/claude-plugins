@@ -8,6 +8,45 @@ Cambios del plugin `drawl99`. Formato basado en
 Para actualizar: `/plugin marketplace update drawl99` y después
 `/plugin update drawl99@drawl99`, y reinicia Claude Code.
 
+## [2.1.0] — 2026-10-04
+
+Cambio de comportamiento en modo automático con `stopAt: "pr"` (el valor por
+defecto): la corrida ya no pasa a la siguiente issue con el PR en verde, sino
+que espera a que una persona lo mergee.
+
+### Agregado
+- `github-goal` es seguro con varias sesiones a la vez sobre el mismo repo
+  (tuyas o de colaboradores). Cada corrida tiene un id de sesión, y el
+  comentario de reclamo lleva una marca oculta con ese id y un latido
+  (`heartbeat`) que la sesión refresca. Un reclamo sin latido por más de
+  `claims.ttlMinutes` (config del repo, por defecto 120) vence y se puede
+  adoptar; uno activo no lo toca ninguna otra sesión.
+- Reclamo con verificación: después de reclamar se relee la issue, y si otra
+  sesión reclamó antes (o asignaron a otra persona, o la rama ya existe), la
+  sesión libera su reclamo y sigue con otra issue, sin reintentar.
+- Un worktree por issue (`<repo>-worktrees/<número>-<slug>`, junto al clon):
+  el clon compartido ya no se mueve de rama, solo se usa para `fetch` y
+  worktrees. El worktree se quita después del merge si está limpio.
+- Una issue en curso por sesión (WIP = 1): en automático con `stopAt: "pr"`, y
+  en toda issue `security`, la sesión espera el merge humano consultando el PR
+  cada `mergeWait.pollMinutes` (preferencia personal, por defecto 5) y atiende
+  mientras tanto pedidos de cambios, CI en rojo y conflictos. Si el PR se
+  cierra sin merge, la corrida se detiene; si vence
+  `mergeWait.timeoutMinutes` (por defecto 480), termina reportando "esperando
+  merge" y la próxima corrida retoma esa issue antes de tomar otra.
+- Nueva referencia `references/concurrency.md` con estas reglas.
+
+### Cambiado
+- Retomar trabajo pendiente distingue por reclamo: lo de otra sesión activa se
+  lista como "en curso en otra sesión" y no se retoma; lo vencido se adopta, y
+  se adopta antes de tomar cualquier issue nueva.
+- El desbloqueo exige además que no haya un reclamo activo, y reclama con la
+  misma verificación.
+- Con el clon principal con cambios ya no se detiene la corrida (⚠️): esos
+  cambios no se tocan.
+- Con `stopAt: "pr"` en automático ya no se pasa a la siguiente issue con el
+  PR en verde. En modo una issue, igual que antes, termina con el PR en verde.
+
 ## [2.0.0] — 2026-09-25
 
 Cambio incompatible en la configuración personal: `defaultRoute` y `models` se

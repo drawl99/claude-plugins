@@ -28,7 +28,8 @@ trabaje en ese repo. Describe el repositorio, nunca a una persona.
   ],
   "requiredChecks": ["ci"],
   "language": { "commits": "en", "pullRequests": "es" },
-  "sdd": { "artifactStore": "hybrid" }
+  "sdd": { "artifactStore": "hybrid" },
+  "claims": { "ttlMinutes": 120 }
 }
 ```
 
@@ -44,6 +45,7 @@ trabaje en ese repo. Describe el repositorio, nunca a una persona.
 | `verify` | Qué correr localmente antes de abrir el PR, según los archivos tocados. `paths` son globs relativos a la raíz; `{service}` se reemplaza por el primer segmento que coincide con `*`. Se corren **todas** las entradas cuyos `paths` toquen el cambio. | Se toma de `CLAUDE.md`/`AGENTS.md`. Si tampoco está ahí, se pregunta una vez. |
 | `requiredChecks` | Nombres de workflows o checks de GitHub que tienen que estar en verde en el PR antes de mergear. | Todos los checks que GitHub reporte en el PR. |
 | `sdd` | Respuesta recomendada de artefactos en el preflight de sesión del SDD de gentle-ai: `artifactStore` (`openspec` → OpenSpec, `engram` → Engram, `hybrid` → Both). Las otras dos recomendadas son fijas: ritmo Automatic y estrategia de PR Single PR. En automático, `github-goal` corre ese preflight una vez por sesión antes de la primera issue; en una issue lo pide gentle-ai. La respuesta siempre la da el usuario. `deliveryStrategy` y `reviewBudgetLines` se ignoran desde 2.0.0 (el presupuesto de revisión de gentle-ai es fijo): si están, avísalo en el chequeo del repo. | Se recomienda Engram. |
+| `claims` | `ttlMinutes`: cuántos minutos sin latido tarda en vencer un reclamo. Un reclamo vencido (de una sesión que murió) se puede adoptar; uno activo no lo toca ninguna otra sesión. Tiene que superar la fase más larga esperada de una issue. Ver *Marca de reclamo* en [concurrency.md](concurrency.md). | `120`. |
 | `language` | Idioma de commits (`commits`) y de descripciones de PR (`pullRequests`), como código ISO (`es`, `en`). | Se imita el idioma de los últimos commits y PRs del repo. |
 
 **Si el archivo no existe**, ofrece crearlo al terminar el chequeo del
@@ -70,6 +72,7 @@ repo.
   "takeBlockingIssues": "ask",
   "reviewConsent": "granted",
   "sizeException": "accept",
+  "mergeWait": { "pollMinutes": 5, "timeoutMinutes": 480 },
   "githubAccounts": { "mi-org": "mi-cuenta-de-trabajo" },
   "workspaceDirs": ["~/Desktop", "~/code", "~/projects", "~/dev"]
 }
@@ -78,7 +81,8 @@ repo.
 | Campo | Valores | Por defecto | Efecto |
 |---|---|---|---|
 | `defaultMode` | `"ask"` \| `"single"` \| `"goal"` | `"ask"` | Con `"ask"`, pregunta al arrancar si resolver una issue elegida o ir en automático. Con `"single"` o `"goal"`, usa ese modo sin preguntar. Pasar una issue como argumento siempre es modo una issue. |
-| `stopAt` | `"pr"` \| `"merge"` | `"pr"` | Con `"pr"`, el flujo termina cada issue al abrir el PR con CI en verde, y sigue con la siguiente solo si sus bloqueantes no dependen de ese PR. Con `"merge"`, mergea cuando el CI está verde (nunca una issue `security`) y cierra la issue si la base no es la rama por defecto. |
+| `stopAt` | `"pr"` \| `"merge"` | `"pr"` | Con `"pr"`, nunca mergea: en modo una issue, termina al tener el PR con CI en verde; en automático, espera a que una persona lo mergee (ver `mergeWait`), atendiendo revisiones, CI en rojo y conflictos, y solo entonces toma la siguiente. Con `"merge"`, mergea cuando el CI está verde (nunca una issue `security`, que espera el merge humano) y cierra la issue si la base no es la rama por defecto. |
+| `mergeWait` | objeto `{ "pollMinutes": número, "timeoutMinutes": número o null }` | `{ "pollMinutes": 5, "timeoutMinutes": 480 }` | Solo en automático, mientras espera el merge humano: cada cuántos minutos consulta el PR (y refresca el latido del reclamo) y cuánto espera como máximo (`null` = sin límite). Al vencer, la corrida termina reportando "esperando merge" y la próxima retoma esa issue antes de tomar otra. Ver *Esperando merge* en [concurrency.md](concurrency.md). |
 | `maxIssues` | número o `null` | `null` | Solo en modo automático: cuántas issues trabajar en una corrida. `null` significa hasta agotar las disponibles. |
 | `confirmEachIssue` | `true` \| `false` | `false` | Solo en modo automático: con `true`, antes de reclamar cada issue pregunta si tomarla o saltarla. |
 | `takeBlockingIssues` | `"ask"` \| `"never"` | `"ask"` | Cuando estás bloqueado por una issue asignada a otra persona que nadie empezó, con `"ask"` te ofrece tomarla (siempre preguntando, nunca sola). Con `"never"`, solo reporta el bloqueo. Ver *Desbloqueo* en `SKILL.md`. |
