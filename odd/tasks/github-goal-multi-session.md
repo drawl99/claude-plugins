@@ -69,5 +69,11 @@ and only then takes the next issue.
     plugin.json, marketplace.json). opencode command unchanged (no affected
     behavior described).
 
+- Commits: 61ad732 (feat), e9e16dc (fix from native review).
+- Native RDD review (medium, granted): 1 lens (reliability) found
+  R3-adopt-branch-contradiction (stale-claim adoption failed the "rama libre"
+  check); corrected in e9e16dc, targeted validation approved, acknowledged
+  (lineage review-6ee3ba8c623805d2).
+
 ## Next step
-T1.
+Push and PR — user decision.
